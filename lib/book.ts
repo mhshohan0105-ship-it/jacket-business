@@ -69,10 +69,11 @@ export async function loadBook() {
   const saleList = saleRows.map((sale) => {
     const items = saleLines.get(sale.id) ?? [];
     const total = items.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
-    const cost = items.reduce((sum, item) => sum + (saleLineCost.get(item.id) ?? 0), 0);
+    const costedItems = items.map((item) => ({ ...item, cost: saleLineCost.get(item.id) ?? 0 }));
+    const cost = costedItems.reduce((sum, item) => sum + item.cost, 0);
     return {
       ...sale,
-      items,
+      items: costedItems,
       total,
       cost,
       profit: total - cost,

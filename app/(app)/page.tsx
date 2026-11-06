@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { ProfitReport } from "@/components/profit-report";
 import { SaleCard } from "@/components/sale-card";
 import { Card, PageHeader, SizeMatrix, Stat, buttonClass } from "@/components/ui";
 import { loadBook, visibleProducts } from "@/lib/book";
 import { variantKey } from "@/lib/constants";
 import { money, todayInDhaka } from "@/lib/format";
 import { dueState } from "@/lib/ledger";
+import { productReport } from "@/lib/report";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +65,14 @@ export default async function HomePage() {
           />
         </Link>
       </section>
+
+      <ProfitReport
+        rows={productReport(
+          book.sales.flatMap((sale) => sale.items),
+          visibleProducts(book).map((product) => product.id),
+        )}
+        products={book.productById}
+      />
 
       <section className="mt-6">
         <h2 className="mb-2 text-lg font-semibold">স্টকে কত পিস আছে</h2>
