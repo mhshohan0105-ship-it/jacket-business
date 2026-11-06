@@ -1,6 +1,8 @@
+import { LanguageToggle } from "@/components/i18n";
 import { buttonClass, inputClass, labelClass } from "@/components/ui";
 import { login } from "@/lib/actions";
 import { loginConfigured } from "@/lib/auth";
+import { getT } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -11,15 +13,16 @@ export default async function LoginPage({
 }) {
   const { error } = await searchParams;
   const configured = loginConfigured();
+  const t = await getT();
 
   return (
-    <main className="flex min-h-dvh items-center justify-center p-4">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-2 p-4">
       <form action={login} className="w-full max-w-sm rounded-xl border border-line bg-card p-6">
-        <h1 className="text-xl font-bold text-pitch">জ্যাকেট হিসাব</h1>
-        <p className="mt-1 text-sm text-muted">ঢুকতে লগইন করুন</p>
+        <h1 className="text-xl font-bold text-pitch">{t.appName}</h1>
+        <p className="mt-1 text-sm text-muted">{t.login.prompt}</p>
 
         <label htmlFor="username" className={`${labelClass} mt-5`}>
-          ইউজারনেম
+          {t.login.username}
         </label>
         <input
           id="username"
@@ -32,7 +35,7 @@ export default async function LoginPage({
         />
 
         <label htmlFor="password" className={`${labelClass} mt-3`}>
-          পাসওয়ার্ড
+          {t.login.password}
         </label>
         <input
           id="password"
@@ -45,19 +48,20 @@ export default async function LoginPage({
 
         {!configured && (
           <p role="alert" className="mt-3 rounded-lg bg-loss-soft px-3 py-2 text-sm text-loss">
-            সার্ভারে APP_USERNAME ও APP_PASSWORD সেট করা নেই, তাই এখন কেউ ঢুকতে পারবে না।
+            {t.login.notConfigured}
           </p>
         )}
         {configured && error && (
           <p role="alert" className="mt-3 rounded-lg bg-loss-soft px-3 py-2 text-sm text-loss">
-            ইউজারনেম বা পাসওয়ার্ড ঠিক নেই।
+            {t.login.wrong}
           </p>
         )}
 
         <button type="submit" className={`${buttonClass("primary")} mt-5 w-full`}>
-          লগইন করুন
+          {t.login.submit}
         </button>
       </form>
+      <LanguageToggle />
     </main>
   );
 }

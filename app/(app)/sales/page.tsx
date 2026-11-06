@@ -4,6 +4,8 @@ import { SaleCard } from "@/components/sale-card";
 import { EmptyState, PageHeader, Stat, Tabs, buttonClass } from "@/components/ui";
 import { loadBook, visibleProducts } from "@/lib/book";
 import { money, todayInDhaka } from "@/lib/format";
+import { messages } from "@/lib/i18n/messages";
+import { getLang } from "@/lib/i18n/server";
 import { productReport } from "@/lib/report";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,8 @@ export default async function SalesPage({
   const onlyDue = filter === "due";
   const book = await loadBook();
   const today = todayInDhaka();
+  const lang = await getLang();
+  const t = messages[lang];
 
   const due = book.sales.filter((sale) => sale.paymentStatus === "due");
   const shown = onlyDue ? due : book.sales;
@@ -24,17 +28,17 @@ export default async function SalesPage({
   return (
     <>
       <PageHeader
-        title="বিক্রি"
+        title={t.sales.title}
         action={
           <Link href="/sales/new" className={buttonClass("primary")}>
-            + নতুন বিক্রি
+            {t.sales.new}
           </Link>
         }
       />
       <section className="mb-4 grid grid-cols-2 gap-3">
-        <Stat label="মোট বিক্রি" value={money(book.sales.reduce((sum, s) => sum + s.total, 0))} />
+        <Stat label={t.home.totalSales} value={money(book.sales.reduce((sum, s) => sum + s.total, 0))} />
         <Stat
-          label="বাকি টাকা"
+          label={t.home.dueAmount}
           value={money(due.reduce((sum, s) => sum + s.total, 0))}
           tone={due.length > 0 ? "warn" : "plain"}
         />
@@ -46,21 +50,22 @@ export default async function SalesPage({
             visibleProducts(book).map((product) => product.id),
           )}
           products={book.productById}
+          t={t}
         />
       )}
       <Tabs
         active={onlyDue ? "due" : "all"}
         tabs={[
-          { key: "all", href: "/sales", label: `সব (${book.sales.length})` },
-          { key: "due", href: "/sales?filter=due", label: `বাকি (${due.length})` },
+          { key: "all", href: "/sales", label: t.sales.all(book.sales.length) },
+          { key: "due", href: "/sales?filter=due", label: t.sales.due(due.length) },
         ]}
       />
       {shown.length === 0 ? (
-        <EmptyState>{onlyDue ? "কোনো টাকা বাকি নেই।" : "এখনো কোনো বিক্রি নেই।"}</EmptyState>
+        <EmptyState>{onlyDue ? t.sales.emptyDue : t.sales.empty}</EmptyState>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {shown.map((sale) => (
-            <SaleCard key={sale.id} sale={sale} products={book.productById} today={today} />
+            <SaleCard key={sale.id} sale={sale} products={book.productById} today={today} lang={lang} />
           ))}
         </div>
       )}

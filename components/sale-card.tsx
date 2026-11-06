@@ -1,6 +1,7 @@
 import { deleteSale, markSalePaid } from "@/lib/actions";
 import type { SaleRow } from "@/lib/book";
 import { money, moneyExact, shortDate } from "@/lib/format";
+import { messages, type Lang } from "@/lib/i18n/messages";
 import { dueState } from "@/lib/ledger";
 import { ActionButton } from "./action-button";
 import { Badge, Card, LineItems } from "./ui";
@@ -9,11 +10,14 @@ export function SaleCard({
   sale,
   products,
   today,
+  lang,
 }: {
   sale: SaleRow;
   products: Map<number, { name: string; color: string }>;
   today: string;
+  lang: Lang;
 }) {
+  const t = messages[lang];
   const state = dueState(sale, today);
 
   return (
@@ -22,7 +26,7 @@ export function SaleCard({
         <div className="min-w-0">
           <p className="truncate font-semibold">{sale.customer}</p>
           <p className="text-xs text-muted">
-            {shortDate(sale.date)}
+            {shortDate(sale.date, lang)}
             {sale.phone && (
               <>
                 {" · "}
@@ -33,9 +37,9 @@ export function SaleCard({
             )}
           </p>
         </div>
-        {state === "paid" && <Badge tone="good">পেইড</Badge>}
-        {state === "due" && <Badge tone="warn">বাকি</Badge>}
-        {state === "overdue" && <Badge tone="bad">তারিখ পেরিয়েছে</Badge>}
+        {state === "paid" && <Badge tone="good">{t.sales.paid}</Badge>}
+        {state === "due" && <Badge tone="warn">{t.sales.dueBadge}</Badge>}
+        {state === "overdue" && <Badge tone="bad">{t.sales.overdue}</Badge>}
       </div>
 
       <div className="mt-3">
@@ -45,19 +49,19 @@ export function SaleCard({
       {sale.paymentStatus === "due" && (
         <p className={`mt-3 rounded-lg px-3 py-2 text-sm ${state === "overdue" ? "bg-loss-soft text-loss" : "bg-due-soft text-due"}`}>
           {sale.expectedPayDate
-            ? `টাকা দেওয়ার কথা: ${shortDate(sale.expectedPayDate)}`
-            : "টাকা দেওয়ার তারিখ ঠিক হয়নি"}
+            ? t.sales.expected(shortDate(sale.expectedPayDate, lang))
+            : t.sales.noExpectedDate}
         </p>
       )}
       {sale.note && <p className="mt-2 text-sm text-muted">{sale.note}</p>}
 
       <div className="num mt-3 flex items-end justify-between border-t border-line pt-3">
         <div>
-          <p className="text-xs text-muted">মোট</p>
+          <p className="text-xs text-muted">{t.common.total}</p>
           <p className="font-bold">{money(sale.total)}</p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-muted">লাভ</p>
+          <p className="text-xs text-muted">{t.common.profit}</p>
           <p className={`font-bold ${sale.profit < 0 ? "text-loss" : "text-pitch"}`}>
             {moneyExact(sale.profit)}
           </p>
@@ -68,17 +72,17 @@ export function SaleCard({
         <ActionButton
           kind="danger"
           action={deleteSale.bind(null, sale.id)}
-          confirm={`${sale.customer}-এর এই বিক্রিটা মুছবেন? স্টক আবার ফিরে আসবে।`}
+          confirm={t.sales.confirmDelete(sale.customer)}
         >
-          মুছুন
+          {t.common.delete}
         </ActionButton>
         {sale.paymentStatus === "due" && (
           <ActionButton
             kind="primary"
             action={markSalePaid.bind(null, sale.id)}
-            confirm={`${sale.customer} ${money(sale.total)} দিয়েছে?`}
+            confirm={t.sales.confirmPaid(sale.customer, money(sale.total))}
           >
-            টাকা পেয়েছি
+            {t.sales.gotPaid}
           </ActionButton>
         )}
       </div>

@@ -1,10 +1,14 @@
 const taka = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });
-const dateFormat = new Intl.DateTimeFormat("bn-BD-u-nu-latn", {
+const dateOptions = {
   day: "numeric",
   month: "short",
   year: "numeric",
   timeZone: "UTC",
-});
+} as const;
+const dateFormats = {
+  bn: new Intl.DateTimeFormat("bn-BD-u-nu-latn", dateOptions),
+  en: new Intl.DateTimeFormat("en-GB", dateOptions),
+};
 
 export function money(value: number) {
   const rounded = Math.round(value);
@@ -17,8 +21,8 @@ export function moneyExact(value: number) {
   return `${value <= -0.005 ? "-" : ""}৳${text}`;
 }
 
-export function shortDate(iso: string) {
-  return dateFormat.format(new Date(`${iso}T00:00:00Z`));
+export function shortDate(iso: string, lang: "bn" | "en" = "bn") {
+  return dateFormats[lang].format(new Date(`${iso}T00:00:00Z`));
 }
 
 /** Today's date in Bangladesh, whatever timezone the server runs in. */

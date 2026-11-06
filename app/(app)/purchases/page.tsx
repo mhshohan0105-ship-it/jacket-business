@@ -4,31 +4,35 @@ import { Card, ColorDot, EmptyState, PageHeader, Stat, buttonClass } from "@/com
 import { deletePurchase } from "@/lib/actions";
 import { loadBook } from "@/lib/book";
 import { money, moneyExact, shortDate } from "@/lib/format";
+import { messages } from "@/lib/i18n/messages";
+import { getLang } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function PurchasesPage() {
   const book = await loadBook();
+  const lang = await getLang();
+  const t = messages[lang];
   const goods = book.purchases.reduce((sum, purchase) => sum + purchase.goods, 0);
   const courier = book.purchases.reduce((sum, purchase) => sum + purchase.courier, 0);
 
   return (
     <>
       <PageHeader
-        title="কেনা"
+        title={t.purchases.title}
         action={
           <Link href="/purchases/new" className={buttonClass("primary")}>
-            + নতুন কেনা
+            {t.purchases.new}
           </Link>
         }
       />
       <section className="mb-4 grid grid-cols-2 gap-3">
-        <Stat label="মালের দাম" value={money(goods)} />
-        <Stat label="মোট কুরিয়ার" value={moneyExact(courier)} />
+        <Stat label={t.common.goodsCost} value={money(goods)} />
+        <Stat label={t.purchases.totalCourier} value={moneyExact(courier)} />
       </section>
 
       {book.purchases.length === 0 ? (
-        <EmptyState>এখনো কিছু কেনা হয়নি। প্রথম চালানটা যোগ করুন।</EmptyState>
+        <EmptyState>{t.purchases.empty}</EmptyState>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {book.purchases.map((purchase) => (
@@ -36,9 +40,9 @@ export default async function PurchasesPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{purchase.supplier}</p>
-                  <p className="text-xs text-muted">{shortDate(purchase.date)}</p>
+                  <p className="text-xs text-muted">{shortDate(purchase.date, lang)}</p>
                 </div>
-                <p className="num shrink-0 text-sm text-muted">{purchase.pieces} পিস</p>
+                <p className="num shrink-0 text-sm text-muted">{t.pcs(purchase.pieces)}</p>
               </div>
 
               <ul className="mt-3 space-y-2 text-sm">
@@ -54,12 +58,14 @@ export default async function PurchasesPage() {
                         </span>
                         <span className="num shrink-0 font-semibold">
                           {moneyExact(item.landed)}
-                          <span className="font-normal text-muted"> /পিস</span>
+                          <span className="font-normal text-muted"> {t.common.perPiece}</span>
                         </span>
                       </div>
                       <p className="num pl-[18px] text-xs text-muted">
-                        কেনা {money(item.unitCost)} + কুরিয়ার{" "}
-                        {moneyExact(item.landed - item.unitCost)}
+                        {t.purchases.costBreakdown(
+                          money(item.unitCost),
+                          moneyExact(item.landed - item.unitCost),
+                        )}
                       </p>
                     </li>
                   );
@@ -69,15 +75,15 @@ export default async function PurchasesPage() {
 
               <dl className="num mt-3 space-y-1 border-t border-line pt-3 text-sm">
                 <div className="flex justify-between gap-3">
-                  <dt className="text-muted">মালের দাম</dt>
+                  <dt className="text-muted">{t.common.goodsCost}</dt>
                   <dd>{moneyExact(purchase.goods)}</dd>
                 </div>
                 <div className="flex justify-between gap-3">
-                  <dt className="text-muted">কুরিয়ার</dt>
+                  <dt className="text-muted">{t.common.courier}</dt>
                   <dd>{moneyExact(purchase.courier)}</dd>
                 </div>
                 <div className="flex justify-between gap-3 text-base font-bold">
-                  <dt>মোট</dt>
+                  <dt>{t.common.total}</dt>
                   <dd>{moneyExact(purchase.total)}</dd>
                 </div>
               </dl>
@@ -85,12 +91,12 @@ export default async function PurchasesPage() {
                 <ActionButton
                   kind="danger"
                   action={deletePurchase.bind(null, purchase.id)}
-                  confirm="এই কেনার হিসাবটা মুছবেন? স্টকও কমে যাবে।"
+                  confirm={t.purchases.confirmDelete}
                 >
-                  মুছুন
+                  {t.common.delete}
                 </ActionButton>
                 <Link href={`/purchases/${purchase.id}/edit`} className={buttonClass("secondary")}>
-                  এডিট
+                  {t.common.edit}
                 </Link>
               </div>
             </Card>

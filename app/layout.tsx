@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Hind_Siliguri } from "next/font/google";
 import type { ReactNode } from "react";
+import { LangProvider } from "@/components/i18n";
+import { getLang, getT } from "@/lib/i18n/server";
 import "./globals.css";
 
 const bengali = Hind_Siliguri({
@@ -9,21 +11,27 @@ const bengali = Hind_Siliguri({
   variable: "--font-bengali",
 });
 
-export const metadata: Metadata = {
-  title: "জ্যাকেট হিসাব",
-  description: "জ্যাকেটের কেনা, বিক্রি, বাকি ও প্রি-অর্ডারের হিসাব",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return {
+    title: t.appName,
+    description: t.appDescription,
+    robots: { index: false, follow: false },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#0F5C45",
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const lang = await getLang();
   return (
-    <html lang="bn" className={bengali.variable}>
-      <body>{children}</body>
+    <html lang={lang} className={bengali.variable}>
+      <body>
+        <LangProvider lang={lang}>{children}</LangProvider>
+      </body>
     </html>
   );
 }

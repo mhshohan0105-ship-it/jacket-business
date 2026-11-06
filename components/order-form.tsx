@@ -7,6 +7,7 @@ import { createPreorder, createPurchase, createSale, updatePurchase } from "@/li
 import { SIZES, variantKey, type Size } from "@/lib/constants";
 import { money, moneyExact } from "@/lib/format";
 import { isEvenSplit, splitCourier } from "@/lib/ledger";
+import { useT } from "./i18n";
 import { PaymentFields, type PaymentStatus } from "./payment-fields";
 import { Card, buttonClass, inputClass, labelClass } from "./ui";
 
@@ -62,6 +63,7 @@ export function OrderForm({
   /** An existing purchase to change, instead of adding a new one. */
   editing?: PurchaseToEdit;
 }) {
+  const t = useT();
   const router = useRouter();
   const nextKey = useRef((editing?.items.length ?? 1) + 1);
   const [pending, start] = useTransition();
@@ -77,7 +79,9 @@ export function OrderForm({
     SIZES.find((size) => stockOf(productId, size) > 0) ?? fallback;
 
   const [date, setDate] = useState(editing?.date ?? today);
-  const [party, setParty] = useState(editing?.supplier ?? (kind === "purchase" ? "ঢাকা" : ""));
+  const [party, setParty] = useState(
+    editing?.supplier ?? (kind === "purchase" ? t.form.defaultSupplier : ""),
+  );
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState(editing?.note ?? "");
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("paid");
@@ -211,7 +215,7 @@ export function OrderForm({
       <Card className="grid gap-3 p-4 sm:grid-cols-2">
         <div>
           <label htmlFor="party" className={labelClass}>
-            {kind === "purchase" ? "কোথা থেকে কেনা" : "ক্রেতার নাম"}
+            {kind === "purchase" ? t.form.supplier : t.form.customer}
           </label>
           <input
             id="party"
@@ -223,7 +227,7 @@ export function OrderForm({
         </div>
         <div>
           <label htmlFor="date" className={labelClass}>
-            তারিখ
+            {t.form.date}
           </label>
           <input
             id="date"
@@ -237,7 +241,7 @@ export function OrderForm({
         {kind !== "purchase" && (
           <div>
             <label htmlFor="phone" className={labelClass}>
-              ফোন (ইচ্ছা হলে)
+              {t.form.phone}
             </label>
             <input
               id="phone"
@@ -254,15 +258,15 @@ export function OrderForm({
       {kind === "purchase" && (
         <Card className="p-4">
           <label htmlFor="courier-total" className={labelClass}>
-            এই চালানের মোট কুরিয়ার চার্জ
+            {t.form.batchCourier}
           </label>
           <input
             id="courier-total"
             type="number"
             inputMode="numeric"
             min="0"
-            placeholder="যেমন 200"
             step="any"
+            placeholder={t.form.courierExample}
             value={courierAuto ? courierTotal : String(roundCourier(courierSum))}
             onChange={(event) => {
               setCourierTotal(event.target.value);
@@ -272,13 +276,11 @@ export function OrderForm({
           />
           {courierAuto && pieces > 0 && courierSum > 0 && (
             <p className="num mt-1.5 text-sm font-medium">
-              {money(courierSum)} ÷ {pieces} পিস = প্রতি পিসে {moneyExact(courierSum / pieces)} কুরিয়ার
+              {t.form.courierSum(money(courierSum), pieces, moneyExact(courierSum / pieces))}
             </p>
           )}
           <p className="mt-1.5 text-xs text-muted">
-            {courierAuto
-              ? "সব পিসে সমান ভাগ হবে। চাইলে নিচে কোনো আইটেমের চার্জ আলাদা করে লিখতে পারবেন।"
-              : "আপনি প্রতিটা আইটেমের চার্জ নিজে লিখছেন। এখানে নতুন টাকা লিখলে আবার সব পিসে সমান ভাগ হবে।"}
+            {courierAuto ? t.form.courierAuto : t.form.courierManual}
           </p>
         </Card>
       )}
@@ -292,11 +294,11 @@ export function OrderForm({
           return (
             <Card key={line.key} className="p-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-muted">আইটেম {index + 1}</p>
+                <p className="text-sm font-semibold text-muted">{t.form.item(index + 1)}</p>
                 {lines.length > 1 && (
                   <button
                     type="button"
-                    aria-label={`আইটেম ${index + 1} বাদ দিন`}
+                    aria-label={t.form.removeItem(index + 1)}
                     onClick={() => setLines(lines.filter((l) => l.key !== line.key))}
                     className="-m-2 p-2 text-muted hover:text-loss"
                   >
@@ -308,7 +310,7 @@ export function OrderForm({
               <div className="mt-2 grid gap-3 sm:grid-cols-2">
                 <div>
                   <label htmlFor={`product-${line.key}`} className={labelClass}>
-                    প্রোডাক্ট
+                    {t.form.product}
                   </label>
                   <select
                     id={`product-${line.key}`}
@@ -325,7 +327,7 @@ export function OrderForm({
                 </div>
 
                 <fieldset>
-                  <legend className={labelClass}>সাইজ</legend>
+                  <legend className={labelClass}>{t.form.size}</legend>
                   <div className="mt-1 grid grid-cols-4 gap-1.5">
                     {SIZES.map((size) => (
                       <button
@@ -342,7 +344,7 @@ export function OrderForm({
                         {size}
                         {kind === "sale" && (
                           <span className="num block text-xs font-normal opacity-80">
-                            {stockOf(line.productId, size)} পিস
+                            {t.pcs(stockOf(line.productId, size))}
                           </span>
                         )}
                       </button>
@@ -352,12 +354,12 @@ export function OrderForm({
 
                 <div>
                   <label htmlFor={`qty-${line.key}`} className={labelClass}>
-                    কয় পিস
+                    {t.form.quantity}
                   </label>
                   <div className="mt-1 flex items-center gap-1.5">
                     <button
                       type="button"
-                      aria-label="এক পিস কমান"
+                      aria-label={t.form.decrease}
                       onClick={() => patch(line.key, { qty: String(Math.max(1, qty - 1)) })}
                       className={`${buttonClass("secondary")} w-11 shrink-0 !px-0`}
                     >
@@ -375,7 +377,7 @@ export function OrderForm({
                     />
                     <button
                       type="button"
-                      aria-label="এক পিস বাড়ান"
+                      aria-label={t.form.increase}
                       onClick={() => patch(line.key, { qty: String(qty + 1) })}
                       className={`${buttonClass("secondary")} w-11 shrink-0 !px-0`}
                     >
@@ -384,14 +386,14 @@ export function OrderForm({
                   </div>
                   {kind === "sale" && (
                     <p className={`mt-1 text-xs ${qty > available ? "font-semibold text-loss" : "text-muted"}`}>
-                      স্টকে আছে {available} পিস
+                      {t.form.inStock(available)}
                     </p>
                   )}
                 </div>
 
                 <div>
                   <label htmlFor={`price-${line.key}`} className={labelClass}>
-                    {kind === "purchase" ? "প্রতি পিস কেনার দাম" : "প্রতি পিস বিক্রির দাম"}
+                    {kind === "purchase" ? t.form.buyPrice : t.form.sellPrice}
                   </label>
                   <input
                     id={`price-${line.key}`}
@@ -427,7 +429,7 @@ export function OrderForm({
                 {kind === "purchase" && (
                   <div className="sm:col-span-2">
                     <label htmlFor={`courier-${line.key}`} className={labelClass}>
-                      এই আইটেমের কুরিয়ার চার্জ
+                      {t.form.lineCourier}
                     </label>
                     <input
                       id={`courier-${line.key}`}
@@ -441,7 +443,7 @@ export function OrderForm({
                     />
                     {qty > 0 && (
                       <p className="mt-1 text-xs text-muted">
-                        কুরিয়ারসহ প্রতি পিসের খরচ:{" "}
+                        {t.form.landedCost}{" "}
                         <span className="num font-semibold text-ink">
                           {moneyExact((Number(line.price) || 0) + lineCourier / qty)}
                         </span>
@@ -455,7 +457,7 @@ export function OrderForm({
         })}
 
         <button type="button" onClick={addLine} className={`${buttonClass("secondary")} w-full border-dashed`}>
-          <Plus size={16} aria-hidden /> আরেকটা আইটেম যোগ করুন
+          <Plus size={16} aria-hidden /> {t.form.addItem}
         </button>
       </div>
 
@@ -471,7 +473,7 @@ export function OrderForm({
         )}
         <div>
           <label htmlFor="note" className={labelClass}>
-            নোট (ইচ্ছা হলে)
+            {t.form.note}
           </label>
           <input
             id="note"
@@ -485,23 +487,23 @@ export function OrderForm({
       <Card className="p-4">
         <dl className="num space-y-1 text-sm">
           <div className="flex justify-between">
-            <dt className="text-muted">মোট পিস</dt>
+            <dt className="text-muted">{t.form.totalPieces}</dt>
             <dd>{pieces}</dd>
           </div>
           {kind === "purchase" && (
             <>
               <div className="flex justify-between">
-                <dt className="text-muted">মালের দাম</dt>
+                <dt className="text-muted">{t.common.goodsCost}</dt>
                 <dd>{money(goods)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-muted">কুরিয়ার</dt>
+                <dt className="text-muted">{t.common.courier}</dt>
                 <dd>{moneyExact(courierSum)}</dd>
               </div>
             </>
           )}
           <div className="flex justify-between border-t border-line pt-2 text-base font-bold">
-            <dt>মোট</dt>
+            <dt>{t.common.total}</dt>
             <dd>{moneyExact(goods + (kind === "purchase" ? courierSum : 0))}</dd>
           </div>
         </dl>
@@ -511,7 +513,7 @@ export function OrderForm({
           </p>
         )}
         <button type="submit" disabled={pending} className={`${buttonClass("primary")} mt-3 w-full`}>
-          {pending ? "সেভ হচ্ছে..." : "সেভ করুন"}
+          {pending ? t.form.saving : t.form.save}
         </button>
       </Card>
     </form>

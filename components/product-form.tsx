@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createProduct, updateProduct } from "@/lib/actions";
+import { useT } from "./i18n";
 import { buttonClass, inputClass, labelClass } from "./ui";
 
 type Initial = {
@@ -13,6 +14,7 @@ type Initial = {
 };
 
 export function ProductForm({ product, onDone }: { product?: Initial; onDone?: () => void }) {
+  const t = useT();
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -53,11 +55,11 @@ export function ProductForm({ product, onDone }: { product?: Initial; onDone?: (
     <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2">
       <div>
         <label htmlFor={`${idPrefix}-name`} className={labelClass}>
-          নাম
+          {t.products.name}
         </label>
         <div className="mt-1 flex gap-2">
           <input
-            aria-label="রঙ"
+            aria-label={t.products.color}
             type="color"
             value={color}
             onChange={(event) => setColor(event.target.value)}
@@ -74,7 +76,7 @@ export function ProductForm({ product, onDone }: { product?: Initial; onDone?: (
       </div>
       <div>
         <label htmlFor={`${idPrefix}-buy`} className={labelClass}>
-          কেনার দাম
+          {t.products.buyPrice}
         </label>
         <input
           id={`${idPrefix}-buy`}
@@ -89,7 +91,7 @@ export function ProductForm({ product, onDone }: { product?: Initial; onDone?: (
       </div>
       <div className="sm:col-span-2">
         <label htmlFor={`${idPrefix}-sell`} className={labelClass}>
-          বিক্রির দামগুলো (কমা দিয়ে আলাদা করে)
+          {t.products.sellPrices}
         </label>
         <input
           id={`${idPrefix}-sell`}
@@ -106,9 +108,9 @@ export function ProductForm({ product, onDone }: { product?: Initial; onDone?: (
         </p>
       )}
       <div className="flex items-center justify-end gap-3 sm:col-span-2">
-        {saved && <p role="status" className="text-sm text-pitch">সেভ হয়েছে</p>}
+        {saved && <p role="status" className="text-sm text-pitch">{t.products.saved}</p>}
         <button type="submit" disabled={pending} className={buttonClass("primary")}>
-          {pending ? "সেভ হচ্ছে..." : product ? "সেভ করুন" : "যোগ করুন"}
+          {pending ? t.form.saving : product ? t.form.save : t.products.add}
         </button>
       </div>
     </form>

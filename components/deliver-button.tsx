@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { deliverPreorder } from "@/lib/actions";
+import { useT } from "./i18n";
 import { PaymentFields, type PaymentStatus } from "./payment-fields";
 import { buttonClass, inputClass, labelClass } from "./ui";
 
@@ -14,6 +15,7 @@ export function DeliverButton({
   customer: string;
   today: string;
 }) {
+  const t = useT();
   const dialog = useRef<HTMLDialogElement>(null);
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
@@ -42,18 +44,18 @@ export function DeliverButton({
         className={buttonClass("primary")}
         onClick={() => dialog.current?.showModal()}
       >
-        ডেলিভারি দিন
+        {t.preorders.deliver}
       </button>
       <dialog
         ref={dialog}
         className="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl bg-card p-5 text-ink"
       >
-        <h2 className="text-lg font-bold">{customer}-কে ডেলিভারি</h2>
-        <p className="mt-1 text-sm text-muted">এটা বিক্রিতে যোগ হবে এবং স্টক কমে যাবে।</p>
+        <h2 className="text-lg font-bold">{t.preorders.deliverTitle(customer)}</h2>
+        <p className="mt-1 text-sm text-muted">{t.preorders.deliverNote}</p>
         <div className="mt-4 space-y-3">
           <div>
             <label htmlFor={`deliver-date-${id}`} className={labelClass}>
-              তারিখ
+              {t.preorders.deliverDate}
             </label>
             <input
               id={`deliver-date-${id}`}
@@ -78,10 +80,10 @@ export function DeliverButton({
         )}
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" className={buttonClass("quiet")} onClick={() => dialog.current?.close()}>
-            থাক
+            {t.preorders.keep}
           </button>
           <button type="button" disabled={pending} className={buttonClass("primary")} onClick={confirm}>
-            {pending ? "হচ্ছে..." : "নিশ্চিত করুন"}
+            {pending ? t.preorders.working : t.preorders.confirm}
           </button>
         </div>
       </dialog>

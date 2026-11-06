@@ -173,10 +173,12 @@ export function SizeMatrix({
   products,
   cell,
   highlight,
+  labels,
 }: {
   products: { id: number; name: string; color: string }[];
   cell: (productId: number, size: string) => number;
   highlight?: (productId: number, size: string) => boolean;
+  labels: { product: string; total: string };
 }) {
   const rowTotal = (id: number) => SIZES.reduce((sum, size) => sum + cell(id, size), 0);
   const columnTotal = (size: string) => products.reduce((sum, p) => sum + cell(p.id, size), 0);
@@ -186,7 +188,7 @@ export function SizeMatrix({
       <thead>
         <tr className="border-b border-line text-xs text-muted">
           <th scope="col" className="px-3 py-2 text-left font-medium sm:px-4">
-            প্রোডাক্ট
+            {labels.product}
           </th>
           {SIZES.map((size) => (
             <th key={size} scope="col" className="w-10 py-2 text-center font-medium sm:w-16">
@@ -194,7 +196,7 @@ export function SizeMatrix({
             </th>
           ))}
           <th scope="col" className="w-12 py-2 pr-3 text-right font-medium sm:w-16 sm:pr-4">
-            মোট
+            {labels.total}
           </th>
         </tr>
       </thead>
@@ -228,7 +230,7 @@ export function SizeMatrix({
       <tfoot>
         <tr className="border-t-2 border-line bg-paper/60 font-semibold">
           <th scope="row" className="px-3 py-2.5 text-left font-semibold sm:px-4">
-            মোট
+            {labels.total}
           </th>
           {SIZES.map((size) => (
             <td key={size} className="py-2.5 text-center">

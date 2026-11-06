@@ -16,6 +16,8 @@ import { deletePreorder, setPreorderCancelled } from "@/lib/actions";
 import { loadBook } from "@/lib/book";
 import { variantKey } from "@/lib/constants";
 import { money, shortDate, todayInDhaka } from "@/lib/format";
+import { messages } from "@/lib/i18n/messages";
+import { getLang } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,8 @@ export default async function PreordersPage({
   const active = STATUSES.find((status) => status === params.status) ?? "pending";
   const book = await loadBook();
   const today = todayInDhaka();
+  const lang = await getLang();
+  const t = messages[lang];
 
   const count = (status: string) =>
     book.preorders.filter((preorder) => preorder.status === status).length;
@@ -52,29 +56,29 @@ export default async function PreordersPage({
   return (
     <>
       <PageHeader
-        title="প্রি-অর্ডার"
+        title={t.preorders.title}
         action={
           <Link href="/preorders/new" className={buttonClass("primary")}>
-            + নতুন
+            {t.preorders.new}
           </Link>
         }
       />
 
       <section className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="অপেক্ষায় অর্ডার" value={`${pending.length}টা`} />
-        <Stat label="মোট পিস" value={`${pending.reduce((sum, p) => sum + p.pieces, 0)} পিস`} />
-        <Stat label="মোট টাকা" value={money(pending.reduce((sum, p) => sum + p.total, 0))} />
+        <Stat label={t.preorders.waitingOrders} value={t.count(pending.length)} />
+        <Stat label={t.preorders.totalPieces} value={t.pcs(pending.reduce((sum, p) => sum + p.pieces, 0))} />
+        <Stat label={t.preorders.totalAmount} value={money(pending.reduce((sum, p) => sum + p.total, 0))} />
         <Stat
-          label="আরও কিনতে হবে"
-          value={`${toBuy} পিস`}
+          label={t.preorders.toBuy}
+          value={t.pcs(toBuy)}
           tone={toBuy > 0 ? "bad" : "plain"}
-          hint="স্টক বাদ দিয়ে"
+          hint={t.preorders.afterStock}
         />
       </section>
 
       {demandProducts.length > 0 && (
         <section className="mb-5">
-          <h2 className="mb-2 text-lg font-semibold">কোন সাইজ কত পিস লাগবে</h2>
+          <h2 className="mb-2 text-lg font-semibold">{t.preorders.neededTitle}</h2>
           <Card className="overflow-hidden">
             <SizeMatrix
               products={demandProducts}
@@ -83,11 +87,13 @@ export default async function PreordersPage({
                 const key = variantKey(id, size);
                 return (demand.get(key) ?? 0) > stockOf(key);
               }}
+              labels={{ product: t.common.product, total: t.common.total }}
             />
           </Card>
           {toBuy > 0 && (
             <p className="mt-1.5 text-xs text-muted">
-              <span className="font-semibold text-loss">লাল</span> সংখ্যা মানে স্টকে এতগুলো নেই।
+              <span className="font-semibold text-loss">{t.preorders.redPrefix}</span>{" "}
+              {t.preorders.redNote}
             </p>
           )}
         </section>
@@ -96,14 +102,14 @@ export default async function PreordersPage({
       <Tabs
         active={active}
         tabs={[
-          { key: "pending", href: "/preorders", label: `অপেক্ষায় (${count("pending")})` },
-          { key: "delivered", href: "/preorders?status=delivered", label: `ডেলিভারি (${count("delivered")})` },
-          { key: "cancelled", href: "/preorders?status=cancelled", label: `বাতিল (${count("cancelled")})` },
+          { key: "pending", href: "/preorders", label: t.preorders.tabWaiting(count("pending")) },
+          { key: "delivered", href: "/preorders?status=delivered", label: t.preorders.tabDelivered(count("delivered")) },
+          { key: "cancelled", href: "/preorders?status=cancelled", label: t.preorders.tabCancelled(count("cancelled")) },
         ]}
       />
 
       {shown.length === 0 ? (
-        <EmptyState>এই তালিকায় কোনো প্রি-অর্ডার নেই।</EmptyState>
+        <EmptyState>{t.preorders.empty}</EmptyState>
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {shown.map((preorder) => (
@@ -112,7 +118,7 @@ export default async function PreordersPage({
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{preorder.customer}</p>
                   <p className="text-xs text-muted">
-                    {shortDate(preorder.date)}
+                    {shortDate(preorder.date, lang)}
                     {preorder.phone && (
                       <>
                         {" · "}
@@ -123,9 +129,9 @@ export default async function PreordersPage({
                     )}
                   </p>
                 </div>
-                {preorder.status === "pending" && <Badge tone="warn">অপেক্ষায়</Badge>}
-                {preorder.status === "delivered" && <Badge tone="good">ডেলিভারি হয়েছে</Badge>}
-                {preorder.status === "cancelled" && <Badge tone="plain">বাতিল</Badge>}
+                {preorder.status === "pending" && <Badge tone="warn">{t.preorders.badgeWaiting}</Badge>}
+                {preorder.status === "delivered" && <Badge tone="good">{t.preorders.badgeDelivered}</Badge>}
+                {preorder.status === "cancelled" && <Badge tone="plain">{t.preorders.badgeCancelled}</Badge>}
               </div>
               <div className="mt-3">
                 <LineItems
@@ -136,7 +142,7 @@ export default async function PreordersPage({
               </div>
               {preorder.note && <p className="mt-2 text-sm text-muted">{preorder.note}</p>}
               <div className="num mt-3 flex items-center justify-between border-t border-line pt-3">
-                <p className="text-sm text-muted">মোট {preorder.pieces} পিস</p>
+                <p className="text-sm text-muted">{t.preorders.totalPcs(preorder.pieces)}</p>
                 <p className="font-bold">{money(preorder.total)}</p>
               </div>
               <div className="mt-3 flex flex-wrap justify-end gap-2">
@@ -144,9 +150,9 @@ export default async function PreordersPage({
                   <ActionButton
                     kind="danger"
                     action={deletePreorder.bind(null, preorder.id)}
-                    confirm={`${preorder.customer}-এর এই প্রি-অর্ডারটা একেবারে মুছবেন?`}
+                    confirm={t.preorders.confirmDelete(preorder.customer)}
                   >
-                    মুছুন
+                    {t.common.delete}
                   </ActionButton>
                 )}
                 {preorder.status === "pending" && (
@@ -154,16 +160,16 @@ export default async function PreordersPage({
                     <ActionButton
                       kind="quiet"
                       action={setPreorderCancelled.bind(null, preorder.id, true)}
-                      confirm={`${preorder.customer}-এর প্রি-অর্ডারটা বাতিল করবেন?`}
+                      confirm={t.preorders.confirmCancel(preorder.customer)}
                     >
-                      বাতিল
+                      {t.preorders.cancel}
                     </ActionButton>
                     <DeliverButton id={preorder.id} customer={preorder.customer} today={today} />
                   </>
                 )}
                 {preorder.status === "cancelled" && (
                   <ActionButton action={setPreorderCancelled.bind(null, preorder.id, false)}>
-                    আবার চালু করুন
+                    {t.preorders.reopen}
                   </ActionButton>
                 )}
               </div>

@@ -17,6 +17,8 @@ import {
   sales,
 } from "./db/schema";
 import { todayInDhaka } from "./format";
+import { isLang, LANG_COOKIE, type Lang } from "./i18n/messages";
+import { getT } from "./i18n/server";
 import { findStockShortage } from "./ledger";
 import {
   InputError,
@@ -39,24 +41,25 @@ async function run(work: (db: DB) => Promise<void>): Promise<ActionResult> {
   try {
     await work(await getDb());
   } catch (error) {
-    if (error instanceof InputError) return { ok: false, error: error.message };
+    const t = await getT();
+    if (error instanceof InputError) return { ok: false, error: error.render(t) };
     console.error(error);
-    return { ok: false, error: "সেভ করা যায়নি, আবার চেষ্টা করুন" };
+    return { ok: false, error: t.errors.saveFailed };
   }
   revalidatePath("/", "layout");
   return { ok: true };
 }
 
 function requireId(value: unknown) {
-  return requireAmount(value, "আইডি", 1);
+  return requireAmount(value, "id", 1);
 }
 
 function parseSoldLine(line: Input) {
   return {
     productId: requireId(line.productId),
     size: requireSize(line.size),
-    qty: requireAmount(line.qty, "সংখ্যা", 1),
-    unitPrice: requireAmount(line.unitPrice, "বিক্রির দাম", 1),
+    qty: requireAmount(line.qty, "quantity", 1),
+    unitPrice: requireAmount(line.unitPrice, "sellPrice", 1),
   };
 }
 
@@ -82,6 +85,14 @@ async function stockOnHand(tx: Tx) {
   return stock;
 }
 
+async function productName(tx: Tx, id: number) {
+  const [product] = await tx
+    .select({ name: products.name })
+    .from(products)
+    .where(eq(products.id, id));
+  return product?.name;
+}
+
 async function assertInStock(tx: Tx, lines: { productId: number; size: string; qty: number }[]) {
   const stock = await stockOnHand(tx);
   const wanted = new Map<string, { productId: number; size: string; qty: number }>();
@@ -93,12 +104,9 @@ async function assertInStock(tx: Tx, lines: { productId: number; size: string; q
   for (const [key, line] of wanted) {
     const available = stock.get(key) ?? 0;
     if (line.qty > available) {
-      const [product] = await tx
-        .select({ name: products.name })
-        .from(products)
-        .where(eq(products.id, line.productId));
-      throw new InputError(
-        `${product?.name ?? "এই প্রোডাক্ট"} ${line.size} স্টকে আছে ${available} পিস, চাওয়া হয়েছে ${line.qty} পিস`,
+      const name = await productName(tx, line.productId);
+      throw new InputError((t) =>
+        t.errors.notEnoughStock(name ?? t.errors.thisProduct, line.size, available, line.qty),
       );
     }
   }
@@ -108,15 +116,15 @@ async function assertInStock(tx: Tx, lines: { productId: number; size: string; q
 
 function parsePurchase(input: Input) {
   return {
-    date: requireDate(input.date, "তারিখ"),
-    supplier: requireText(input.supplier, "কোথা থেকে কেনা"),
+    date: requireDate(input.date, "date"),
+    supplier: requireText(input.supplier, "supplier"),
     note: optionalText(input.note),
     lines: requireLines(input.lines, (line) => ({
       productId: requireId(line.productId),
       size: requireSize(line.size),
-      qty: requireAmount(line.qty, "সংখ্যা", 1),
-      unitCost: requireAmount(line.unitCost, "কেনার দাম", 1),
-      courier: requireDecimalAmount(line.courier, "কুরিয়ার চার্জ"),
+      qty: requireAmount(line.qty, "quantity", 1),
+      unitCost: requireAmount(line.unitCost, "buyPrice", 1),
+      courier: requireDecimalAmount(line.courier, "courier"),
     })),
   };
 }
@@ -151,12 +159,9 @@ export async function updatePurchase(id: number, input: Input) {
 
       const short = findStockShortage(await stockOnHand(tx), oldLines, lines);
       if (short) {
-        const [product] = await tx
-          .select({ name: products.name })
-          .from(products)
-          .where(eq(products.id, short.productId));
-        throw new InputError(
-          `${product?.name ?? "এই প্রোডাক্ট"} ${short.size} আগেই বিক্রি হয়েছে, তাই আরও ${short.shortage} পিস কেনা রাখতে হবে`,
+        const name = await productName(tx, short.productId);
+        throw new InputError((t) =>
+          t.errors.alreadySold(name ?? t.errors.thisProduct, short.size, short.shortage),
         );
       }
 
@@ -176,7 +181,7 @@ export async function deletePurchase(id: number) {
         .where(eq(purchaseItems.purchaseId, requireId(id)));
 
       if (findStockShortage(await stockOnHand(tx), lines, [])) {
-        throw new InputError("এই কেনার মাল বিক্রি হয়ে গেছে, তাই মোছা যাবে না");
+        throw new InputError((t) => t.errors.purchaseSold);
       }
       await tx.delete(purchases).where(eq(purchases.id, id));
     });
@@ -187,8 +192,8 @@ export async function deletePurchase(id: number) {
 
 export async function createSale(input: Input) {
   return run(async (db) => {
-    const date = requireDate(input.date, "তারিখ");
-    const customer = requireText(input.customer, "ক্রেতার নাম");
+    const date = requireDate(input.date, "date");
+    const customer = requireText(input.customer, "customer");
     const phone = optionalText(input.phone);
     const note = optionalText(input.note);
     const payment = parsePayment(input);
@@ -242,8 +247,8 @@ export async function deleteSale(id: number) {
 
 export async function createPreorder(input: Input) {
   return run(async (db) => {
-    const date = requireDate(input.date, "তারিখ");
-    const customer = requireText(input.customer, "ক্রেতার নাম");
+    const date = requireDate(input.date, "date");
+    const customer = requireText(input.customer, "customer");
     const phone = optionalText(input.phone);
     const note = optionalText(input.note);
     const lines = requireLines(input.lines, parseSoldLine);
@@ -264,13 +269,13 @@ export async function createPreorder(input: Input) {
 export async function deliverPreorder(input: Input) {
   return run(async (db) => {
     const id = requireId(input.id);
-    const date = requireDate(input.date, "তারিখ");
+    const date = requireDate(input.date, "date");
     const payment = parsePayment(input);
 
     await db.transaction(async (tx) => {
       const [preorder] = await tx.select().from(preorders).where(eq(preorders.id, id));
       if (!preorder || preorder.status !== "pending") {
-        throw new InputError("এই প্রি-অর্ডারটা আর অপেক্ষায় নেই");
+        throw new InputError((t) => t.errors.preorderNotWaiting);
       }
       const lines = await tx
         .select()
@@ -319,7 +324,7 @@ export async function deletePreorder(id: number) {
       .select({ id: sales.id })
       .from(sales)
       .where(eq(sales.preorderId, requireId(id)));
-    if (linked) throw new InputError("এটা ডেলিভারি হয়ে গেছে, আগে বিক্রিটা মুছুন");
+    if (linked) throw new InputError((t) => t.errors.preorderDelivered);
     await db.delete(preorders).where(eq(preorders.id, id));
   });
 }
@@ -329,14 +334,14 @@ export async function deletePreorder(id: number) {
 function parseProduct(input: Input) {
   const sellPrices = input.sellPrices;
   if (!Array.isArray(sellPrices) || sellPrices.length === 0) {
-    throw new InputError("অন্তত একটা বিক্রির দাম দিন");
+    throw new InputError((t) => t.errors.needSellPrice);
   }
   const color = typeof input.color === "string" ? input.color : "";
   return {
-    name: requireText(input.name, "প্রোডাক্টের নাম"),
+    name: requireText(input.name, "productName"),
     color: /^#[0-9a-fA-F]{6}$/.test(color) ? color : "#0F5C45",
-    buyPrice: requireAmount(input.buyPrice, "কেনার দাম"),
-    sellPrices: sellPrices.map((price) => requireAmount(price, "বিক্রির দাম")),
+    buyPrice: requireAmount(input.buyPrice, "buyPrice"),
+    sellPrices: sellPrices.map((price) => requireAmount(price, "sellPrice")),
   };
 }
 
@@ -345,7 +350,7 @@ async function assertNameFree(db: DB, name: string, ownId?: number) {
   const clash = rows.find(
     (row) => row.id !== ownId && row.name.toLowerCase() === name.toLowerCase(),
   );
-  if (clash) throw new InputError("এই নামে প্রোডাক্ট আগে থেকেই আছে");
+  if (clash) throw new InputError((t) => t.errors.nameTaken);
 }
 
 export async function createProduct(input: Input) {
@@ -367,6 +372,18 @@ export async function updateProduct(id: number, input: Input) {
 export async function setProductArchived(id: number, archived: boolean) {
   return run(async (db) => {
     await db.update(products).set({ archived }).where(eq(products.id, requireId(id)));
+  });
+}
+
+// Language
+
+export async function setLanguage(lang: Lang) {
+  if (!isLang(lang)) return;
+  (await cookies()).set(LANG_COOKIE, lang, {
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
   });
 }
 

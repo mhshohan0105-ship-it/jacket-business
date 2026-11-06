@@ -4,14 +4,15 @@ import { ClipboardList, Home, LogOut, Package, ShoppingBag, Truck } from "lucide
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/lib/actions";
+import { LanguageToggle, useT } from "./i18n";
 
 const LINKS = [
-  { href: "/", label: "হোম", icon: Home },
-  { href: "/purchases", label: "কেনা", icon: Truck },
-  { href: "/sales", label: "বিক্রি", icon: ShoppingBag },
-  { href: "/preorders", label: "প্রি-অর্ডার", icon: ClipboardList },
-  { href: "/products", label: "প্রোডাক্ট", icon: Package },
-];
+  { href: "/", key: "home", icon: Home },
+  { href: "/purchases", key: "purchases", icon: Truck },
+  { href: "/sales", key: "sales", icon: ShoppingBag },
+  { href: "/preorders", key: "preorders", icon: ClipboardList },
+  { href: "/products", key: "products", icon: Package },
+] as const;
 
 function useIsActive() {
   const pathname = usePathname();
@@ -19,6 +20,7 @@ function useIsActive() {
 }
 
 export function LogoutButton({ className = "" }: { className?: string }) {
+  const t = useT();
   return (
     <form action={logout} className={className}>
       <button
@@ -26,7 +28,7 @@ export function LogoutButton({ className = "" }: { className?: string }) {
         className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted hover:bg-paper hover:text-ink"
       >
         <LogOut size={18} aria-hidden />
-        লগআউট
+        {t.nav.logout}
       </button>
     </form>
   );
@@ -34,11 +36,12 @@ export function LogoutButton({ className = "" }: { className?: string }) {
 
 export function SideNav() {
   const isActive = useIsActive();
+  const t = useT();
   return (
     <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col border-r border-line bg-card p-4 lg:flex">
-      <p className="px-3 py-2 text-lg font-bold text-pitch">জ্যাকেট হিসাব</p>
+      <p className="px-3 py-2 text-lg font-bold text-pitch">{t.appName}</p>
       <nav className="mt-3 space-y-1">
-        {LINKS.map(({ href, label, icon: Icon }) => (
+        {LINKS.map(({ href, key, icon: Icon }) => (
           <Link
             key={href}
             href={href}
@@ -48,20 +51,24 @@ export function SideNav() {
             }`}
           >
             <Icon size={18} aria-hidden />
-            {label}
+            {t.nav[key]}
           </Link>
         ))}
       </nav>
-      <LogoutButton className="mt-auto" />
+      <div className="mt-auto">
+        <LanguageToggle className="w-full" />
+        <LogoutButton />
+      </div>
     </aside>
   );
 }
 
 export function BottomNav() {
   const isActive = useIsActive();
+  const t = useT();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-line bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
-      {LINKS.map(({ href, label, icon: Icon }) => (
+      {LINKS.map(({ href, key, icon: Icon }) => (
         <Link
           key={href}
           href={href}
@@ -71,7 +78,7 @@ export function BottomNav() {
           }`}
         >
           <Icon size={20} aria-hidden />
-          {label}
+          {t.nav[key]}
         </Link>
       ))}
     </nav>

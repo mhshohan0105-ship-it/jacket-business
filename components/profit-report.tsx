@@ -1,5 +1,6 @@
 import { Trophy } from "lucide-react";
 import { money, moneyExact } from "@/lib/format";
+import type { Messages } from "@/lib/i18n/messages";
 import { bestProduct, type ProductRow } from "@/lib/report";
 import { Card, ColorDot } from "./ui";
 
@@ -17,6 +18,7 @@ export function OverallReport({
   stockValue,
   rows,
   products,
+  t,
 }: {
   bought: number;
   sold: number;
@@ -24,6 +26,7 @@ export function OverallReport({
   stockValue: number;
   rows: ProductRow[];
   products: ProductNames;
+  t: Messages;
 }) {
   const result = sold - bought;
   const best = bestProduct(rows);
@@ -31,28 +34,27 @@ export function OverallReport({
 
   return (
     <section className="mt-6">
-      <h2 className="mb-2 text-lg font-semibold">লাভ-ক্ষতির হিসাব</h2>
+      <h2 className="mb-2 text-lg font-semibold">{t.report.title}</h2>
 
       <div className="grid gap-3 lg:grid-cols-2">
         <Card className="p-4">
           <dl className="num space-y-2 text-sm">
             <div className="flex justify-between gap-3">
-              <dt className="text-muted">মোট বিক্রি</dt>
+              <dt className="text-muted">{t.home.totalSales}</dt>
               <dd>{moneyExact(sold)}</dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-muted">মোট কেনা (কুরিয়ারসহ)</dt>
+              <dt className="text-muted">{t.report.boughtWithCourier}</dt>
               <dd>− {moneyExact(bought)}</dd>
             </div>
             <div className="flex justify-between gap-3 border-t border-line pt-2 text-base font-bold">
-              <dt>{result < 0 ? "মোট ক্ষতি" : "মোট লাভ"}</dt>
+              <dt>{result < 0 ? t.home.totalLoss : t.home.totalProfit}</dt>
               <dd className={profitClass(result)}>{moneyExact(Math.abs(result))}</dd>
             </div>
           </dl>
           {stockPieces > 0 && (
             <p className="num mt-2 text-xs text-muted">
-              স্টকে এখনো {stockPieces} পিস আছে ({money(stockValue)})। এগুলো বিক্রি হলে হিসাব আরও
-              বাড়বে।
+              {t.report.stockNote(stockPieces, money(stockValue))}
             </p>
           )}
         </Card>
@@ -67,16 +69,16 @@ export function OverallReport({
             <Trophy size={22} />
           </span>
           <div className="min-w-0">
-            <p className="text-sm text-muted">সেরা প্রোডাক্ট</p>
+            <p className="text-sm text-muted">{t.report.bestProduct}</p>
             {best && bestInfo ? (
               <>
                 <p className="truncate text-lg font-bold">{bestInfo.name}</p>
                 <p className="num text-sm text-muted">
-                  {best.pieces} পিস বিক্রি · {money(best.revenue)}
+                  {t.report.bestSold(best.pieces, money(best.revenue))}
                 </p>
               </>
             ) : (
-              <p className="text-sm font-medium">প্রথম বিক্রির পর এখানে দেখাবে</p>
+              <p className="text-sm font-medium">{t.report.bestEmpty}</p>
             )}
           </div>
         </Card>
@@ -89,9 +91,11 @@ export function OverallReport({
 export function ProductProfitTable({
   rows,
   products,
+  t,
 }: {
   rows: ProductRow[];
   products: ProductNames;
+  t: Messages;
 }) {
   const pieces = rows.reduce((sum, row) => sum + row.pieces, 0);
   const revenue = rows.reduce((sum, row) => sum + row.revenue, 0);
@@ -99,22 +103,22 @@ export function ProductProfitTable({
 
   return (
     <section className="mb-4">
-      <h2 className="mb-2 text-lg font-semibold">প্রোডাক্ট অনুযায়ী লাভ</h2>
+      <h2 className="mb-2 text-lg font-semibold">{t.report.byProductTitle}</h2>
       <Card className="overflow-hidden">
         <table className="num w-full table-fixed border-collapse text-sm">
           <thead>
             <tr className="border-b border-line text-xs text-muted">
               <th scope="col" className="px-3 py-2 text-left font-medium sm:px-4">
-                প্রোডাক্ট
+                {t.common.product}
               </th>
               <th scope="col" className="w-9 py-2 text-right font-medium sm:w-20">
-                পিস
+                {t.report.piecesColumn}
               </th>
               <th scope="col" className="w-[72px] py-2 text-right font-medium sm:w-28">
-                বিক্রি
+                {t.common.sale}
               </th>
               <th scope="col" className="w-[84px] py-2 pr-3 text-right font-medium sm:w-28 sm:pr-4">
-                লাভ
+                {t.common.profit}
               </th>
             </tr>
           </thead>
@@ -146,7 +150,7 @@ export function ProductProfitTable({
           <tfoot>
             <tr className="border-t-2 border-line bg-paper/60 font-semibold">
               <th scope="row" className="px-3 py-2.5 text-left font-semibold sm:px-4">
-                মোট
+                {t.common.total}
               </th>
               <td className="py-2.5 text-right">{pieces}</td>
               <td className="py-2.5 text-right">{money(revenue)}</td>
@@ -157,9 +161,7 @@ export function ProductProfitTable({
           </tfoot>
         </table>
       </Card>
-      <p className="mt-1.5 text-xs text-muted">
-        শুধু বিক্রি হওয়া পিসের হিসাব: বিক্রির দাম − কুরিয়ারসহ আসল খরচ।
-      </p>
+      <p className="mt-1.5 text-xs text-muted">{t.report.byProductNote}</p>
     </section>
   );
 }
