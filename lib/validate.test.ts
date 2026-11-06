@@ -3,6 +3,7 @@ import {
   InputError,
   optionalDate,
   requireAmount,
+  requireDecimalAmount,
   requireLines,
   requireSize,
   requireText,
@@ -27,6 +28,14 @@ describe("validate", () => {
     expect(() => requireAmount(10.5, "দাম")).toThrow(InputError);
     expect(() => requireAmount("10", "দাম")).toThrow(InputError);
     expect(() => requireAmount(5_000_000_000, "দাম")).toThrow(InputError);
+  });
+
+  it("allows paisa on decimal amounts, and rejects bad ones", () => {
+    expect(requireDecimalAmount(26.66672, "কুরিয়ার")).toBe(26.6667);
+    expect(requireDecimalAmount(0, "কুরিয়ার")).toBe(0);
+    expect(() => requireDecimalAmount(-1, "কুরিয়ার")).toThrow(InputError);
+    expect(() => requireDecimalAmount(Number.NaN, "কুরিয়ার")).toThrow(InputError);
+    expect(() => requireDecimalAmount("5", "কুরিয়ার")).toThrow(InputError);
   });
 
   it("only allows known sizes", () => {

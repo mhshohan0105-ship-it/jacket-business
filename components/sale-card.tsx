@@ -1,6 +1,6 @@
 import { deleteSale, markSalePaid } from "@/lib/actions";
 import type { SaleRow } from "@/lib/book";
-import { money, shortDate } from "@/lib/format";
+import { money, moneyExact, shortDate } from "@/lib/format";
 import { dueState } from "@/lib/ledger";
 import { ActionButton } from "./action-button";
 import { Badge, Card, LineItems } from "./ui";
@@ -59,7 +59,7 @@ export function SaleCard({
         <div className="text-right">
           <p className="text-xs text-muted">লাভ</p>
           <p className={`font-bold ${sale.profit < 0 ? "text-loss" : "text-pitch"}`}>
-            {money(sale.profit)}
+            {moneyExact(sale.profit)}
           </p>
         </div>
       </div>

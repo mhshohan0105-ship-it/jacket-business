@@ -11,6 +11,12 @@ export function money(value: number) {
   return `${rounded < 0 ? "-" : ""}৳${taka.format(Math.abs(rounded))}`;
 }
 
+/** For per-piece costs and profits: keeps paisa, as in ৳1,063.33. */
+export function moneyExact(value: number) {
+  const text = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 2 }).format(Math.abs(value));
+  return `${value <= -0.005 ? "-" : ""}৳${text}`;
+}
+
 export function shortDate(iso: string) {
   return dateFormat.format(new Date(`${iso}T00:00:00Z`));
 }

@@ -3,7 +3,7 @@ import { ActionButton } from "@/components/action-button";
 import { Card, ColorDot, EmptyState, PageHeader, Stat, buttonClass } from "@/components/ui";
 import { deletePurchase } from "@/lib/actions";
 import { loadBook } from "@/lib/book";
-import { money, shortDate } from "@/lib/format";
+import { money, moneyExact, shortDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,7 @@ export default async function PurchasesPage() {
       />
       <section className="mb-4 grid grid-cols-2 gap-3">
         <Stat label="মালের দাম" value={money(goods)} />
-        <Stat label="মোট কুরিয়ার" value={money(courier)} />
+        <Stat label="মোট কুরিয়ার" value={moneyExact(courier)} />
       </section>
 
       {book.purchases.length === 0 ? (
@@ -52,11 +52,14 @@ export default async function PurchasesPage() {
                           {product?.name} <span className="font-semibold">{item.size}</span>
                           <span className="num text-muted"> × {item.qty}</span>
                         </span>
-                        <span className="num shrink-0 text-muted">{money(item.unitCost)}</span>
+                        <span className="num shrink-0 font-semibold">
+                          {moneyExact(item.landed)}
+                          <span className="font-normal text-muted"> /পিস</span>
+                        </span>
                       </div>
                       <p className="num pl-[18px] text-xs text-muted">
-                        কুরিয়ার {money(item.courier)} · প্রতি পিস আসল খরচ{" "}
-                        <span className="font-semibold text-ink">{money(item.landed)}</span>
+                        কেনা {money(item.unitCost)} + কুরিয়ার{" "}
+                        {moneyExact(item.landed - item.unitCost)}
                       </p>
                     </li>
                   );
@@ -64,10 +67,20 @@ export default async function PurchasesPage() {
               </ul>
               {purchase.note && <p className="mt-2 text-sm text-muted">{purchase.note}</p>}
 
-              <div className="num mt-3 flex items-center justify-between border-t border-line pt-3">
-                <p className="text-sm text-muted">মোট (কুরিয়ারসহ)</p>
-                <p className="font-bold">{money(purchase.total)}</p>
-              </div>
+              <dl className="num mt-3 space-y-1 border-t border-line pt-3 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-muted">মালের দাম</dt>
+                  <dd>{moneyExact(purchase.goods)}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-muted">কুরিয়ার</dt>
+                  <dd>{moneyExact(purchase.courier)}</dd>
+                </div>
+                <div className="flex justify-between gap-3 text-base font-bold">
+                  <dt>মোট</dt>
+                  <dd>{moneyExact(purchase.total)}</dd>
+                </div>
+              </dl>
               <div className="mt-2 flex flex-wrap justify-end gap-2">
                 <ActionButton
                   kind="danger"

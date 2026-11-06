@@ -1,0 +1,1 @@
+ALTER TABLE "jacket"."purchase_items" ALTER COLUMN "courier" SET DATA TYPE numeric(14, 4);

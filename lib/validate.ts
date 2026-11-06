@@ -36,6 +36,14 @@ export function requireAmount(value: unknown, label: string, min = 0) {
   return value;
 }
 
+/** An amount that may have paisa, such as one line's share of a courier charge. */
+export function requireDecimalAmount(value: unknown, label: string) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > MAX_AMOUNT) {
+    throw new InputError(`${label} ঠিক নেই`);
+  }
+  return Math.round(value * 10_000) / 10_000;
+}
+
 export function requireSize(value: unknown) {
   if (!SIZES.includes(value as (typeof SIZES)[number])) throw new InputError("সাইজ ঠিক নেই");
   return value as string;

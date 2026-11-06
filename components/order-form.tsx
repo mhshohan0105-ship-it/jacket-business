@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { createPreorder, createPurchase, createSale, updatePurchase } from "@/lib/actions";
 import { SIZES, variantKey, type Size } from "@/lib/constants";
-import { money } from "@/lib/format";
-import { splitCourier } from "@/lib/ledger";
+import { money, moneyExact } from "@/lib/format";
+import { isEvenSplit, splitCourier } from "@/lib/ledger";
 import { PaymentFields, type PaymentStatus } from "./payment-fields";
 import { Card, buttonClass, inputClass, labelClass } from "./ui";
 
@@ -33,6 +33,11 @@ const LIST_PAGE: Record<Kind, string> = {
   sale: "/sales",
   preorder: "/preorders",
 };
+
+/** Drops floating-point noise such as 200.00000000000003 from what is shown. */
+function roundCourier(value: number) {
+  return Number(value.toFixed(4));
+}
 
 export type PurchaseToEdit = {
   id: number;
@@ -100,9 +105,19 @@ export function OrderForm({
   );
 
   // While splitting automatically, each line's courier comes from the batch total.
-  // An edit keeps the saved per-line charges until a new total is typed.
-  const [courierTotal, setCourierTotal] = useState("");
-  const [courierAuto, setCourierAuto] = useState(!editing);
+  // An edit stays automatic if it was an even split; hand-typed charges stay as typed.
+  const savedCouriers = editing?.items.map((item) => item.courier) ?? [];
+  const [courierTotal, setCourierTotal] = useState(() =>
+    editing ? String(roundCourier(savedCouriers.reduce((sum, value) => sum + value, 0))) : "",
+  );
+  const [courierAuto, setCourierAuto] = useState(
+    () =>
+      !editing ||
+      isEvenSplit(
+        savedCouriers,
+        editing.items.map((item) => item.qty),
+      ),
+  );
 
   const qtyOf = (line: Line) => Number(line.qty) || 0;
   const autoSplit = splitCourier(Number(courierTotal) || 0, lines.map(qtyOf));
@@ -247,17 +262,23 @@ export function OrderForm({
             inputMode="numeric"
             min="0"
             placeholder="যেমন 200"
-            value={courierAuto ? courierTotal : String(courierSum)}
+            step="any"
+            value={courierAuto ? courierTotal : String(roundCourier(courierSum))}
             onChange={(event) => {
               setCourierTotal(event.target.value);
               setCourierAuto(true);
             }}
             className={`${inputClass} num mt-1`}
           />
+          {courierAuto && pieces > 0 && courierSum > 0 && (
+            <p className="num mt-1.5 text-sm font-medium">
+              {money(courierSum)} ÷ {pieces} পিস = প্রতি পিসে {moneyExact(courierSum / pieces)} কুরিয়ার
+            </p>
+          )}
           <p className="mt-1.5 text-xs text-muted">
             {courierAuto
-              ? "পিস অনুযায়ী প্রতিটা আইটেমে নিজে থেকে ভাগ হবে। চাইলে নিচে প্রতিটা আইটেমের চার্জ আলাদা করে লিখতে পারবেন।"
-              : "আপনি প্রতিটা আইটেমের চার্জ নিজে লিখছেন। এখানে নতুন টাকা লিখলে আবার পিস অনুযায়ী ভাগ হবে।"}
+              ? "সব পিসে সমান ভাগ হবে। চাইলে নিচে কোনো আইটেমের চার্জ আলাদা করে লিখতে পারবেন।"
+              : "আপনি প্রতিটা আইটেমের চার্জ নিজে লিখছেন। এখানে নতুন টাকা লিখলে আবার সব পিসে সমান ভাগ হবে।"}
           </p>
         </Card>
       )}
@@ -413,7 +434,8 @@ export function OrderForm({
                       type="number"
                       inputMode="numeric"
                       min="0"
-                      value={courierAuto ? String(lineCourier) : line.courier}
+                      step="any"
+                      value={courierAuto ? String(Number(lineCourier.toFixed(2))) : line.courier}
                       onChange={(event) => editLineCourier(line.key, event.target.value)}
                       className={`${inputClass} num mt-1`}
                     />
@@ -421,7 +443,7 @@ export function OrderForm({
                       <p className="mt-1 text-xs text-muted">
                         কুরিয়ারসহ প্রতি পিসের খরচ:{" "}
                         <span className="num font-semibold text-ink">
-                          {money((Number(line.price) || 0) + lineCourier / qty)}
+                          {moneyExact((Number(line.price) || 0) + lineCourier / qty)}
                         </span>
                       </p>
                     )}
@@ -474,13 +496,13 @@ export function OrderForm({
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted">কুরিয়ার</dt>
-                <dd>{money(courierSum)}</dd>
+                <dd>{moneyExact(courierSum)}</dd>
               </div>
             </>
           )}
           <div className="flex justify-between border-t border-line pt-2 text-base font-bold">
             <dt>মোট</dt>
-            <dd>{money(goods + (kind === "purchase" ? courierSum : 0))}</dd>
+            <dd>{moneyExact(goods + (kind === "purchase" ? courierSum : 0))}</dd>
           </div>
         </dl>
         {error && (

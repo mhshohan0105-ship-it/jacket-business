@@ -24,6 +24,7 @@ import {
   optionalText,
   requireAmount,
   requireDate,
+  requireDecimalAmount,
   requireLines,
   requireSize,
   requireText,
@@ -115,7 +116,7 @@ function parsePurchase(input: Input) {
       size: requireSize(line.size),
       qty: requireAmount(line.qty, "সংখ্যা", 1),
       unitCost: requireAmount(line.unitCost, "কেনার দাম", 1),
-      courier: requireAmount(line.courier, "কুরিয়ার চার্জ"),
+      courier: requireDecimalAmount(line.courier, "কুরিয়ার চার্জ"),
     })),
   };
 }

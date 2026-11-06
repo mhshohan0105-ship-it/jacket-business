@@ -2,6 +2,7 @@ import {
   boolean,
   date,
   integer,
+  numeric,
   pgSchema,
   serial,
   text,
@@ -43,8 +44,9 @@ export const purchaseItems = jacket.table("purchase_items", {
   size: text("size").notNull(),
   qty: integer("qty").notNull(),
   unitCost: integer("unit_cost").notNull(),
-  // Courier charge for this whole line, not per piece.
-  courier: integer("courier").notNull().default(0),
+  // Courier charge for this whole line, not per piece. Four decimals so that
+  // 200 taka over 15 pieces comes to the same per-piece cost on every line.
+  courier: numeric("courier", { precision: 14, scale: 4, mode: "number" }).notNull().default(0),
 });
 
 export const preorders = jacket.table("preorders", {

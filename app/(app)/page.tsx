@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { ProfitReport } from "@/components/profit-report";
+import { OverallReport } from "@/components/profit-report";
 import { SaleCard } from "@/components/sale-card";
 import { Card, PageHeader, SizeMatrix, Stat, buttonClass } from "@/components/ui";
 import { loadBook, visibleProducts } from "@/lib/book";
 import { variantKey } from "@/lib/constants";
-import { money, todayInDhaka } from "@/lib/format";
+import { money, moneyExact, todayInDhaka } from "@/lib/format";
 import { dueState } from "@/lib/ledger";
 import { productReport } from "@/lib/report";
 
@@ -15,9 +15,10 @@ export default async function HomePage() {
   const today = todayInDhaka();
 
   const revenue = book.sales.reduce((sum, sale) => sum + sale.total, 0);
-  const profit = book.sales.reduce((sum, sale) => sum + sale.profit, 0);
   const spent = book.purchases.reduce((sum, purchase) => sum + purchase.total, 0);
   const courier = book.purchases.reduce((sum, purchase) => sum + purchase.courier, 0);
+  const boughtPieces = book.purchases.reduce((sum, purchase) => sum + purchase.pieces, 0);
+  const overall = revenue - spent;
 
   const stockEntries = [...book.stock.values()];
   const stockPieces = stockEntries.reduce((sum, entry) => sum + entry.qty, 0);
@@ -46,7 +47,12 @@ export default async function HomePage() {
       />
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <Stat label="মোট লাভ" value={money(profit)} tone={profit < 0 ? "bad" : "good"} hint="কুরিয়ার খরচ বাদে" />
+        <Stat
+          label={overall < 0 ? "মোট ক্ষতি" : "মোট লাভ"}
+          value={money(Math.abs(overall))}
+          tone={overall < 0 ? "bad" : "good"}
+          hint="মোট বিক্রি − মোট কেনা"
+        />
         <Stat label="মোট বিক্রি" value={money(revenue)} hint={`${book.sales.reduce((s, x) => s + x.pieces, 0)} পিস`} />
         <Stat
           label="বাকি টাকা"
@@ -54,7 +60,15 @@ export default async function HomePage() {
           tone={overdue.length > 0 ? "bad" : dueTotal > 0 ? "warn" : "plain"}
           hint={overdue.length > 0 ? `${overdue.length}টার তারিখ পেরিয়ে গেছে` : `${dueSales.length}টা বিক্রি`}
         />
-        <Stat label="মোট কেনা" value={money(spent)} hint={`কুরিয়ার ${money(courier)} সহ`} />
+        <Stat
+          label="মোট কেনা"
+          value={money(spent)}
+          hint={
+            boughtPieces > 0
+              ? `কুরিয়ার ${money(courier)} সহ · প্রতি পিস ${moneyExact(spent / boughtPieces)}`
+              : `কুরিয়ার ${money(courier)} সহ`
+          }
+        />
         <Stat label="স্টকের মূল্য" value={money(stockValue)} hint={`${stockPieces} পিস`} />
         <Link href="/preorders" className="block rounded-xl hover:opacity-85">
           <Stat
@@ -66,7 +80,11 @@ export default async function HomePage() {
         </Link>
       </section>
 
-      <ProfitReport
+      <OverallReport
+        bought={spent}
+        sold={revenue}
+        stockPieces={stockPieces}
+        stockValue={stockValue}
         rows={productReport(
           book.sales.flatMap((sale) => sale.items),
           visibleProducts(book).map((product) => product.id),

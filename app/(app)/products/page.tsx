@@ -4,7 +4,7 @@ import { Badge, Card, ColorDot, PageHeader } from "@/components/ui";
 import { setProductArchived } from "@/lib/actions";
 import { loadBook } from "@/lib/book";
 import { SIZES, variantKey } from "@/lib/constants";
-import { money } from "@/lib/format";
+import { money, moneyExact } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -17,10 +17,9 @@ export default async function ProductsPage() {
 
       <div className="grid gap-3 lg:grid-cols-2">
         {book.products.map((product) => {
-          const inStock = SIZES.reduce(
-            (sum, size) => sum + (book.stock.get(variantKey(product.id, size))?.qty ?? 0),
-            0,
-          );
+          const entries = SIZES.map((size) => book.stock.get(variantKey(product.id, size)));
+          const inStock = entries.reduce((sum, entry) => sum + (entry?.qty ?? 0), 0);
+          const stockValue = entries.reduce((sum, entry) => sum + (entry?.value ?? 0), 0);
           return (
             <Card key={product.id} className={`p-4 ${product.archived ? "opacity-70" : ""}`}>
               <div className="flex items-center justify-between gap-3">
@@ -38,6 +37,12 @@ export default async function ProductsPage() {
                 কেনা {money(product.buyPrice)} · বিক্রি{" "}
                 {product.sellPrices.join(", ")}
               </p>
+              {inStock > 0 && (
+                <p className="num mt-0.5 text-sm">
+                  স্টকের প্রতি পিসের আসল খরচ{" "}
+                  <span className="font-semibold">{moneyExact(stockValue / inStock)}</span>
+                </p>
+              )}
               <details className="mt-3 border-t border-line pt-3">
                 <summary className="text-sm font-medium text-pitch">এডিট করুন</summary>
                 <div className="mt-3">

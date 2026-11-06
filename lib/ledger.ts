@@ -91,14 +91,21 @@ export function findStockShortage(
   return null;
 }
 
-/** Splits a batch's courier charge across lines by piece count, in whole taka. */
+// Matches the four decimals of the courier column.
+const COURIER_UNITS = 10_000;
+
+/**
+ * Splits a batch's courier charge across lines so every piece carries the same
+ * share (total / pieces). The parts still add back up to exactly the total.
+ */
 export function splitCourier(total: number, qtys: number[]): number[] {
   const pieces = qtys.reduce((sum, qty) => sum + qty, 0);
   if (pieces === 0) return qtys.map(() => 0);
 
-  const exact = qtys.map((qty) => (total * qty) / pieces);
+  const units = Math.round(total * COURIER_UNITS);
+  const exact = qtys.map((qty) => (units * qty) / pieces);
   const result = exact.map(Math.floor);
-  let leftover = total - result.reduce((sum, value) => sum + value, 0);
+  let leftover = units - result.reduce((sum, value) => sum + value, 0);
 
   const byRemainder = exact
     .map((value, index) => ({ index, remainder: value - Math.floor(value) }))
@@ -108,7 +115,14 @@ export function splitCourier(total: number, qtys: number[]): number[] {
     result[index] += 1;
     leftover -= 1;
   }
-  return result;
+  return result.map((value) => value / COURIER_UNITS);
+}
+
+/** True when these per-line charges are simply an even split of their total. */
+export function isEvenSplit(couriers: number[], qtys: number[]) {
+  const total = couriers.reduce((sum, value) => sum + value, 0);
+  const even = splitCourier(total, qtys);
+  return couriers.every((value, index) => Math.abs(value - even[index]) < 0.001);
 }
 
 export type DueState = "paid" | "due" | "overdue";

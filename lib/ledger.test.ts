@@ -3,6 +3,7 @@ import {
   computeLedger,
   dueState,
   findStockShortage,
+  isEvenSplit,
   landedUnitCost,
   splitCourier,
 } from "./ledger";
@@ -90,14 +91,47 @@ describe("splitCourier", () => {
     expect(splitCourier(200, [2, 8])).toEqual([40, 160]);
   });
 
-  it("always adds back up to the total in whole taka", () => {
-    const parts = splitCourier(200, [1, 3, 3]);
-    expect(parts.reduce((a, b) => a + b, 0)).toBe(200);
-    expect(parts.every(Number.isInteger)).toBe(true);
+  // The real first batch: 15 pieces on 10 lines, 200 taka courier.
+  const firstBatch = [2, 3, 1, 2, 1, 2, 1, 1, 1, 1];
+
+  it("gives every piece the same cost, whatever the line size", () => {
+    const parts = splitCourier(200, firstBatch);
+    parts.forEach((courier, index) => {
+      const perPiece = landedUnitCost({ qty: firstBatch[index], unitCost: 1050, courier });
+      expect(perPiece).toBeCloseTo(1050 + 200 / 15, 2);
+    });
+  });
+
+  it("always adds back up to exactly the total", () => {
+    const sum = splitCourier(200, firstBatch).reduce((a, b) => a + b, 0);
+    expect(sum).toBeCloseTo(200, 6);
+  });
+
+  it("keeps the batch value exact when everything is in stock", () => {
+    const lines = splitCourier(200, firstBatch).map((courier, index) => ({
+      productId: index,
+      size: "L",
+      qty: firstBatch[index],
+      unitCost: 1050,
+      courier,
+    }));
+    const value = [...computeLedger(lines, []).stock.values()].reduce((s, e) => s + e.value, 0);
+    expect(value).toBeCloseTo(15950, 6);
   });
 
   it("handles no pieces yet", () => {
     expect(splitCourier(200, [0, 0])).toEqual([0, 0]);
+  });
+});
+
+describe("isEvenSplit", () => {
+  it("recognises an even split", () => {
+    const qtys = [2, 3, 1];
+    expect(isEvenSplit(splitCourier(200, qtys), qtys)).toBe(true);
+  });
+
+  it("recognises charges typed by hand", () => {
+    expect(isEvenSplit([150, 50], [1, 1])).toBe(false);
   });
 });
 

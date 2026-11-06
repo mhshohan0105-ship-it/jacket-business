@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { ProductProfitTable } from "@/components/profit-report";
 import { SaleCard } from "@/components/sale-card";
 import { EmptyState, PageHeader, Stat, Tabs, buttonClass } from "@/components/ui";
-import { loadBook } from "@/lib/book";
+import { loadBook, visibleProducts } from "@/lib/book";
 import { money, todayInDhaka } from "@/lib/format";
+import { productReport } from "@/lib/report";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +39,15 @@ export default async function SalesPage({
           tone={due.length > 0 ? "warn" : "plain"}
         />
       </section>
+      {book.sales.length > 0 && (
+        <ProductProfitTable
+          rows={productReport(
+            book.sales.flatMap((sale) => sale.items),
+            visibleProducts(book).map((product) => product.id),
+          )}
+          products={book.productById}
+        />
+      )}
       <Tabs
         active={onlyDue ? "due" : "all"}
         tabs={[
