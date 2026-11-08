@@ -251,12 +251,13 @@ export async function createPreorder(input: Input) {
     const customer = requireText(input.customer, "customer");
     const phone = optionalText(input.phone);
     const note = optionalText(input.note);
+    const paymentStatus = input.paymentStatus === "paid" ? ("paid" as const) : ("due" as const);
     const lines = requireLines(input.lines, parseSoldLine);
 
     await db.transaction(async (tx) => {
       const [preorder] = await tx
         .insert(preorders)
-        .values({ date, customer, phone, note })
+        .values({ date, customer, phone, note, paymentStatus })
         .returning({ id: preorders.id });
       await tx
         .insert(preorderItems)
@@ -306,6 +307,15 @@ export async function deliverPreorder(input: Input) {
       );
       await tx.update(preorders).set({ status: "delivered" }).where(eq(preorders.id, id));
     });
+  });
+}
+
+export async function markPreorderPaid(id: number) {
+  return run(async (db) => {
+    await db
+      .update(preorders)
+      .set({ paymentStatus: "paid" })
+      .where(eq(preorders.id, requireId(id)));
   });
 }
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PreorderChart } from "@/components/preorder-chart";
 import { OverallReport } from "@/components/profit-report";
 import { SaleCard } from "@/components/sale-card";
 import { Card, PageHeader, SizeMatrix, Stat, buttonClass } from "@/components/ui";
@@ -8,7 +9,7 @@ import { money, moneyExact, todayInDhaka } from "@/lib/format";
 import { messages } from "@/lib/i18n/messages";
 import { getLang } from "@/lib/i18n/server";
 import { dueState } from "@/lib/ledger";
-import { productReport } from "@/lib/report";
+import { preorderDemand, productReport } from "@/lib/report";
 
 export const dynamic = "force-dynamic";
 
@@ -102,6 +103,20 @@ export default async function HomePage() {
         products={book.productById}
         t={t}
       />
+
+      {pending.length > 0 && (
+        <section className="mt-6">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3">
+            <h2 className="text-lg font-semibold">{t.preorders.chartTitle}</h2>
+            <Link href="/preorder-board" className="text-sm font-medium text-pitch hover:underline">
+              {t.preorders.openBoard} →
+            </Link>
+          </div>
+          <Card className="p-2 sm:p-3">
+            <PreorderChart demand={preorderDemand(pending)} products={book.productById} t={t} />
+          </Card>
+        </section>
+      )}
 
       <section className="mt-6">
         <h2 className="mb-2 text-lg font-semibold">{t.home.stockTitle}</h2>

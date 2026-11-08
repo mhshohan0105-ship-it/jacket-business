@@ -8,16 +8,17 @@ export type PaymentStatus = "paid" | "due";
 /** Paid or due; choosing due reveals the expected payment date. */
 export function PaymentFields({
   status,
-  expectedDate,
+  expectedDate = "",
   minDate,
   onStatus,
   onExpectedDate,
 }: {
   status: PaymentStatus;
-  expectedDate: string;
-  minDate: string;
+  expectedDate?: string;
+  minDate?: string;
   onStatus: (status: PaymentStatus) => void;
-  onExpectedDate: (date: string) => void;
+  /** Leave out to skip asking for the expected payment date. */
+  onExpectedDate?: (date: string) => void;
 }) {
   const t = useT();
   const option = (value: PaymentStatus, label: string, activeClass: string) => (
@@ -42,7 +43,7 @@ export function PaymentFields({
           {option("due", t.payment.due, "border-due bg-due-soft text-due")}
         </div>
       </div>
-      {status === "due" && (
+      {status === "due" && onExpectedDate && (
         <div>
           <label htmlFor="expected-date" className={labelClass}>
             {t.payment.expectedDate}

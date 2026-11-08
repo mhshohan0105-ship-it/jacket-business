@@ -12,7 +12,7 @@ import {
   Tabs,
   buttonClass,
 } from "@/components/ui";
-import { deletePreorder, setPreorderCancelled } from "@/lib/actions";
+import { deletePreorder, markPreorderPaid, setPreorderCancelled } from "@/lib/actions";
 import { loadBook } from "@/lib/book";
 import { variantKey } from "@/lib/constants";
 import { money, shortDate, todayInDhaka } from "@/lib/format";
@@ -78,7 +78,12 @@ export default async function PreordersPage({
 
       {demandProducts.length > 0 && (
         <section className="mb-5">
-          <h2 className="mb-2 text-lg font-semibold">{t.preorders.neededTitle}</h2>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3">
+            <h2 className="text-lg font-semibold">{t.preorders.neededTitle}</h2>
+            <Link href="/preorder-board" className="text-sm font-medium text-pitch hover:underline">
+              {t.preorders.openBoard} →
+            </Link>
+          </div>
           <Card className="overflow-hidden">
             <SizeMatrix
               products={demandProducts}
@@ -129,9 +134,17 @@ export default async function PreordersPage({
                     )}
                   </p>
                 </div>
-                {preorder.status === "pending" && <Badge tone="warn">{t.preorders.badgeWaiting}</Badge>}
-                {preorder.status === "delivered" && <Badge tone="good">{t.preorders.badgeDelivered}</Badge>}
-                {preorder.status === "cancelled" && <Badge tone="plain">{t.preorders.badgeCancelled}</Badge>}
+                <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                  {preorder.status === "pending" && <Badge tone="plain">{t.preorders.badgeWaiting}</Badge>}
+                  {preorder.status === "delivered" && <Badge tone="good">{t.preorders.badgeDelivered}</Badge>}
+                  {preorder.status === "cancelled" && <Badge tone="plain">{t.preorders.badgeCancelled}</Badge>}
+                  {preorder.status !== "cancelled" &&
+                    (preorder.paymentStatus === "paid" ? (
+                      <Badge tone="good">{t.preorders.paidBadge}</Badge>
+                    ) : (
+                      <Badge tone="warn">{t.preorders.dueBadge}</Badge>
+                    ))}
+                </div>
               </div>
               <div className="mt-3">
                 <LineItems
@@ -164,7 +177,20 @@ export default async function PreordersPage({
                     >
                       {t.preorders.cancel}
                     </ActionButton>
-                    <DeliverButton id={preorder.id} customer={preorder.customer} today={today} />
+                    {preorder.paymentStatus === "due" && (
+                      <ActionButton
+                        action={markPreorderPaid.bind(null, preorder.id)}
+                        confirm={t.preorders.confirmPaid(preorder.customer, money(preorder.total))}
+                      >
+                        {t.preorders.markPaid}
+                      </ActionButton>
+                    )}
+                    <DeliverButton
+                      id={preorder.id}
+                      customer={preorder.customer}
+                      today={today}
+                      paymentStatus={preorder.paymentStatus}
+                    />
                   </>
                 )}
                 {preorder.status === "cancelled" && (

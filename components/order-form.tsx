@@ -84,7 +84,10 @@ export function OrderForm({
   );
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState(editing?.note ?? "");
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("paid");
+  // Pre-orders are usually unpaid when taken; sales usually paid on the spot.
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(
+    kind === "preorder" ? "due" : "paid",
+  );
   const [expectedDate, setExpectedDate] = useState("");
   const [lines, setLines] = useState<Line[]>(() =>
     editing
@@ -203,7 +206,7 @@ export function OrderForm({
         result =
           kind === "sale"
             ? await createSale({ ...sold, paymentStatus, expectedPayDate: expectedDate })
-            : await createPreorder(sold);
+            : await createPreorder({ ...sold, paymentStatus });
       }
       if (result.ok) router.push(LIST_PAGE[kind]);
       else setError(result.error);
@@ -471,6 +474,7 @@ export function OrderForm({
             onExpectedDate={setExpectedDate}
           />
         )}
+        {kind === "preorder" && <PaymentFields status={paymentStatus} onStatus={setPaymentStatus} />}
         <div>
           <label htmlFor="note" className={labelClass}>
             {t.form.note}

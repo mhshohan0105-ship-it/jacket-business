@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bestProduct, productReport } from "./report";
+import { bestProduct, preorderDemand, productReport } from "./report";
 
 const sold = (productId: number, qty: number, unitPrice: number, cost: number) => ({
   productId,
@@ -36,6 +36,34 @@ describe("productReport", () => {
 
   it("shows a loss as negative profit", () => {
     expect(productReport([sold(1, 1, 1000, 1070)], [1])[0].profit).toBe(-70);
+  });
+});
+
+describe("preorderDemand", () => {
+  const order = (paymentStatus: "paid" | "due", ...items: [number, string, number][]) => ({
+    paymentStatus,
+    items: items.map(([productId, size, qty]) => ({ productId, size, qty })),
+  });
+
+  it("adds up pieces per product and size across orders", () => {
+    const demand = preorderDemand([
+      order("due", [1, "L", 2], [2, "XL", 1]),
+      order("paid", [1, "L", 3]),
+    ]);
+    expect(demand.cells.get("1:L")).toBe(5);
+    expect(demand.cells.get("2:XL")).toBe(1);
+    expect(demand.pieces).toBe(6);
+    expect(demand.max).toBe(5);
+    expect(demand.productIds).toEqual([1, 2]);
+  });
+
+  it("counts paid and due orders", () => {
+    const demand = preorderDemand([order("due"), order("due"), order("paid")]);
+    expect(demand).toMatchObject({ orders: 3, paid: 1, due: 2 });
+  });
+
+  it("is empty with no orders", () => {
+    expect(preorderDemand([])).toMatchObject({ pieces: 0, orders: 0, max: 0, productIds: [] });
   });
 });
 

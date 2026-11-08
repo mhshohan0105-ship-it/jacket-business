@@ -1,0 +1,1 @@
+ALTER TABLE "jacket"."preorders" ADD COLUMN "payment_status" text DEFAULT 'due' NOT NULL;

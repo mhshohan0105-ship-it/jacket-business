@@ -10,17 +10,20 @@ export function DeliverButton({
   id,
   customer,
   today,
+  paymentStatus,
 }: {
   id: number;
   customer: string;
   today: string;
+  /** What the pre-order already says, so a paid pre-order becomes a paid sale. */
+  paymentStatus: PaymentStatus;
 }) {
   const t = useT();
   const dialog = useRef<HTMLDialogElement>(null);
   const [pending, start] = useTransition();
   const [error, setError] = useState("");
   const [date, setDate] = useState(today);
-  const [status, setStatus] = useState<PaymentStatus>("paid");
+  const [status, setStatus] = useState<PaymentStatus>(paymentStatus);
   const [expectedDate, setExpectedDate] = useState("");
 
   const confirm = () => {
@@ -42,7 +45,12 @@ export function DeliverButton({
       <button
         type="button"
         className={buttonClass("primary")}
-        onClick={() => dialog.current?.showModal()}
+        onClick={() => {
+          // Start from the pre-order's current payment, which may have changed since this loaded.
+          setStatus(paymentStatus);
+          setError("");
+          dialog.current?.showModal();
+        }}
       >
         {t.preorders.deliver}
       </button>

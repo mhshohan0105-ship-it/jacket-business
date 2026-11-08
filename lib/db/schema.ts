@@ -58,6 +58,10 @@ export const preorders = jacket.table("preorders", {
   status: text("status", { enum: ["pending", "delivered", "cancelled"] })
     .notNull()
     .default("pending"),
+  // Most pre-orders are taken before the customer pays.
+  paymentStatus: text("payment_status", { enum: ["paid", "due"] })
+    .notNull()
+    .default("due"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
