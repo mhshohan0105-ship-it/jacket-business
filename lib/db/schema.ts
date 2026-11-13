@@ -105,3 +105,22 @@ export const saleItems = jacket.table("sale_items", {
   qty: integer("qty").notNull(),
   unitPrice: integer("unit_price").notNull(),
 });
+
+/** History of pieces swapped with the supplier: which batch, what for what, how many. */
+export const purchaseExchanges = jacket.table("purchase_exchanges", {
+  id: serial("id").primaryKey(),
+  purchaseId: integer("purchase_id")
+    .notNull()
+    .references(() => purchases.id, { onDelete: "cascade" }),
+  date: date("date", { mode: "string" }).notNull(),
+  fromProductId: integer("from_product_id")
+    .notNull()
+    .references(() => products.id),
+  fromSize: text("from_size").notNull(),
+  toProductId: integer("to_product_id")
+    .notNull()
+    .references(() => products.id),
+  toSize: text("to_size").notNull(),
+  qty: integer("qty").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

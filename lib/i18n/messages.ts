@@ -147,6 +147,25 @@ const bn = {
     cellTitle: (product: string, size: string, qty: string) => `${product} ${size}: ${qty}`,
   },
 
+  exchange: {
+    button: "এক্সচেঞ্জ",
+    title: "এক্সচেঞ্জ করুন",
+    note: "এই চালানের কিছু মাল অন্য প্রোডাক্ট বা সাইজে বদলান। দাম আর কুরিয়ার আগের মতোই থাকবে।",
+    from: "কোনটা বদলাবেন",
+    fromOption: (name: string, size: string, max: number) => `${name} ${size} (সর্বোচ্চ ${max} পিস)`,
+    qty: "কয় পিস",
+    to: "বদলে কী নেবেন",
+    date: "তারিখ",
+    confirm: "এক্সচেঞ্জ করুন",
+    cancel: "থাক",
+    working: "হচ্ছে...",
+    history: "এক্সচেঞ্জ",
+    historyLine: (date: string, from: string, to: string, qty: number) =>
+      `${date}: ${from} → ${to} (${qty} পিস)`,
+    sameError: "একই প্রোডাক্ট আর সাইজে বদলানো যায় না",
+    tooMany: (max: number) => `এই চালান থেকে সর্বোচ্চ ${max} পিস বদলানো যাবে`,
+  },
+
   payment: {
     question: "টাকা পেয়েছেন?",
     paid: "পেইড",
@@ -385,6 +404,24 @@ const en: Messages = {
     chartEmpty: "No pre-orders are waiting right now.",
     back: "← Back",
     cellTitle: (product, size, qty) => `${product} ${size}: ${qty}`,
+  },
+
+  exchange: {
+    button: "Exchange",
+    title: "Exchange pieces",
+    note: "Swap some pieces from this batch for another product or size. Price and courier stay the same.",
+    from: "What to swap",
+    fromOption: (name, size, max) => `${name} ${size} (up to ${pcs(max)})`,
+    qty: "Pieces",
+    to: "Swap for",
+    date: "Date",
+    confirm: "Exchange",
+    cancel: "Not now",
+    working: "Working...",
+    history: "Exchanges",
+    historyLine: (date, from, to, qty) => `${date}: ${from} → ${to} (${pcs(qty)})`,
+    sameError: "Pick a different product or size to swap for",
+    tooMany: (max) => `Up to ${pcs(max)} can be swapped from this batch`,
   },
 
   payment: {

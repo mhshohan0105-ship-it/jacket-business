@@ -4,6 +4,7 @@ import {
   preorderItems,
   preorders,
   products,
+  purchaseExchanges,
   purchaseItems,
   purchases,
   saleItems,
@@ -33,6 +34,7 @@ export async function loadBook() {
     saleItemRows,
     preorderRows,
     preorderItemRows,
+    exchangeRows,
   ] = await Promise.all([
     db.select().from(products).orderBy(asc(products.id)),
     db.select().from(purchases).orderBy(asc(purchases.date), asc(purchases.id)),
@@ -41,11 +43,13 @@ export async function loadBook() {
     db.select().from(saleItems).orderBy(asc(saleItems.id)),
     db.select().from(preorders).orderBy(desc(preorders.date), desc(preorders.id)),
     db.select().from(preorderItems).orderBy(asc(preorderItems.id)),
+    db.select().from(purchaseExchanges).orderBy(asc(purchaseExchanges.date), asc(purchaseExchanges.id)),
   ]);
 
   const purchaseLines = groupBy(purchaseItemRows, (row) => row.purchaseId);
   const saleLines = groupBy(saleItemRows, (row) => row.saleId);
   const preorderLines = groupBy(preorderItemRows, (row) => row.preorderId);
+  const exchangesByPurchase = groupBy(exchangeRows, (row) => row.purchaseId);
 
   const { saleLineCost, stock } = computeLedger(
     purchaseRows.flatMap((purchase) => purchaseLines.get(purchase.id) ?? []),
@@ -58,6 +62,7 @@ export async function loadBook() {
     const courier = items.reduce((sum, item) => sum + item.courier, 0);
     return {
       ...purchase,
+      exchanges: exchangesByPurchase.get(purchase.id) ?? [],
       items: items.map((item) => ({ ...item, landed: landedUnitCost(item) })),
       goods,
       courier,

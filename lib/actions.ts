@@ -11,11 +11,13 @@ import {
   preorderItems,
   preorders,
   products,
+  purchaseExchanges,
   purchaseItems,
   purchases,
   saleItems,
   sales,
 } from "./db/schema";
+import { applyExchange } from "./exchange";
 import { todayInDhaka } from "./format";
 import { isLang, LANG_COOKIE, type Lang } from "./i18n/messages";
 import { getT } from "./i18n/server";
@@ -168,6 +170,65 @@ export async function updatePurchase(id: number, input: Input) {
       await tx.update(purchases).set(purchase).where(eq(purchases.id, id));
       await tx.delete(purchaseItems).where(eq(purchaseItems.purchaseId, id));
       await tx.insert(purchaseItems).values(lines.map((line) => ({ ...line, purchaseId: id })));
+    });
+  });
+}
+
+/** Swaps pieces of one product and size in a batch for another, and logs it. */
+export async function exchangePurchaseItem(input: Input) {
+  return run(async (db) => {
+    const purchaseId = requireId(input.purchaseId);
+    const date = requireDate(input.date, "date");
+    const from = { productId: requireId(input.productId), size: requireSize(input.size) };
+    const to = { productId: requireId(input.toProductId), size: requireSize(input.toSize) };
+    const qty = requireAmount(input.qty, "quantity", 1);
+    if (from.productId === to.productId && from.size === to.size) {
+      throw new InputError((t) => t.exchange.sameError);
+    }
+
+    await db.transaction(async (tx) => {
+      const oldLines = await tx
+        .select()
+        .from(purchaseItems)
+        .where(eq(purchaseItems.purchaseId, purchaseId))
+        .orderBy(purchaseItems.id);
+      const next = applyExchange(oldLines, from, to, qty);
+      if (!next) {
+        const max = oldLines
+          .filter((line) => line.productId === from.productId && line.size === from.size)
+          .reduce((sum, line) => sum + line.qty, 0);
+        throw new InputError((t) => t.exchange.tooMany(max));
+      }
+
+      // Pieces already sold can't go back to the supplier.
+      const short = findStockShortage(await stockOnHand(tx), oldLines, next);
+      if (short) {
+        const name = await productName(tx, short.productId);
+        throw new InputError((t) =>
+          t.errors.alreadySold(name ?? t.errors.thisProduct, short.size, short.shortage),
+        );
+      }
+
+      await tx.delete(purchaseItems).where(eq(purchaseItems.purchaseId, purchaseId));
+      await tx.insert(purchaseItems).values(
+        next.map((line) => ({
+          purchaseId,
+          productId: line.productId,
+          size: line.size,
+          qty: line.qty,
+          unitCost: line.unitCost,
+          courier: line.courier,
+        })),
+      );
+      await tx.insert(purchaseExchanges).values({
+        purchaseId,
+        date,
+        fromProductId: from.productId,
+        fromSize: from.size,
+        toProductId: to.productId,
+        toSize: to.size,
+        qty,
+      });
     });
   });
 }
