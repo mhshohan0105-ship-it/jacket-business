@@ -39,7 +39,7 @@ export default async function SalesPage({
         <Stat label={t.home.totalSales} value={money(book.sales.reduce((sum, s) => sum + s.total, 0))} />
         <Stat
           label={t.home.dueAmount}
-          value={money(due.reduce((sum, s) => sum + s.total, 0))}
+          value={money(due.reduce((sum, s) => sum + s.dueAmount, 0))}
           tone={due.length > 0 ? "warn" : "plain"}
         />
       </section>

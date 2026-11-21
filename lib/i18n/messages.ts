@@ -166,6 +166,27 @@ const bn = {
     tooMany: (max: number) => `এই চালান থেকে সর্বোচ্চ ${max} পিস বদলানো যাবে`,
   },
 
+  partial: {
+    option: "আংশিক",
+    amount: "কত টাকা পেয়েছেন",
+    remaining: (amount: string) => `বাকি থাকবে ${amount}`,
+    remainingDate: "বাকি টাকা কবে দেবে",
+    tooMuch: "আংশিক টাকা মোট দামের চেয়ে কম হতে হবে",
+    badge: "আংশিক পেইড",
+    received: "পেয়েছি",
+    left: "বাকি",
+    historyTitle: "টাকা পাওয়ার হিসাব",
+    historyLine: (date: string, amount: string) => `${date}: ${amount}`,
+    payTitle: (customer: string) => `${customer}-এর টাকা জমা`,
+    payNote: (due: string) => `এখন বাকি আছে ${due}। পুরোটা বা কিছু অংশ লিখতে পারেন।`,
+    payAmount: "কত টাকা পেলেন",
+    payDate: "তারিখ",
+    paySave: "জমা করুন",
+    payCancel: "থাক",
+    payTooMuch: (due: string) => `বাকি আছে সর্বোচ্চ ${due}`,
+    alreadyPaid: "এই বিক্রির পুরো টাকা আগেই পাওয়া গেছে",
+  },
+
   payment: {
     question: "টাকা পেয়েছেন?",
     paid: "পেইড",
@@ -233,6 +254,7 @@ const bn = {
     courier: "কুরিয়ার চার্জ",
     productName: "প্রোডাক্টের নাম",
     id: "আইডি",
+    paidAmount: "টাকার পরিমাণ",
   },
 
   errors: {
@@ -424,6 +446,27 @@ const en: Messages = {
     tooMany: (max) => `Up to ${pcs(max)} can be swapped from this batch`,
   },
 
+  partial: {
+    option: "Part paid",
+    amount: "Amount received",
+    remaining: (amount) => `${amount} will be left due`,
+    remainingDate: "When the rest will be paid",
+    tooMuch: "A part payment must be less than the total",
+    badge: "Part paid",
+    received: "Received",
+    left: "Due",
+    historyTitle: "Payments received",
+    historyLine: (date, amount) => `${date}: ${amount}`,
+    payTitle: (customer) => `Payment from ${customer}`,
+    payNote: (due) => `${due} is still due. Enter all of it or a part.`,
+    payAmount: "Amount received",
+    payDate: "Date",
+    paySave: "Save payment",
+    payCancel: "Not now",
+    payTooMuch: (due) => `At most ${due} is due`,
+    alreadyPaid: "This sale is already fully paid",
+  },
+
   payment: {
     question: "Payment received?",
     paid: "Paid",
@@ -490,6 +533,7 @@ const en: Messages = {
     courier: "courier charge",
     productName: "product name",
     id: "ID",
+    paidAmount: "amount",
   },
 
   errors: {

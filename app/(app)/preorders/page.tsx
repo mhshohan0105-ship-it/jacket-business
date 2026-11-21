@@ -190,6 +190,7 @@ export default async function PreordersPage({
                       customer={preorder.customer}
                       today={today}
                       paymentStatus={preorder.paymentStatus}
+                      total={preorder.total}
                     />
                   </>
                 )}

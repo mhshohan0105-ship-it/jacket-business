@@ -89,6 +89,7 @@ export function OrderForm({
     kind === "preorder" ? "due" : "paid",
   );
   const [expectedDate, setExpectedDate] = useState("");
+  const [paidAmount, setPaidAmount] = useState("");
   const [lines, setLines] = useState<Line[]>(() =>
     editing
       ? editing.items.map((item, index) => ({
@@ -205,7 +206,12 @@ export function OrderForm({
         };
         result =
           kind === "sale"
-            ? await createSale({ ...sold, paymentStatus, expectedPayDate: expectedDate })
+            ? await createSale({
+                ...sold,
+                paymentStatus,
+                paidAmount: Number(paidAmount),
+                expectedPayDate: expectedDate,
+              })
             : await createPreorder({ ...sold, paymentStatus });
       }
       if (result.ok) router.push(LIST_PAGE[kind]);
@@ -468,9 +474,13 @@ export function OrderForm({
         {kind === "sale" && (
           <PaymentFields
             status={paymentStatus}
+            onStatus={setPaymentStatus}
+            allowPartial
+            total={goods}
+            paidAmount={paidAmount}
+            onPaidAmount={setPaidAmount}
             expectedDate={expectedDate}
             minDate={date}
-            onStatus={setPaymentStatus}
             onExpectedDate={setExpectedDate}
           />
         )}

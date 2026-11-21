@@ -8,9 +8,11 @@ import {
   purchaseItems,
   purchases,
   saleItems,
+  salePayments,
   sales,
 } from "./db/schema";
 import { computeLedger, landedUnitCost } from "./ledger";
+import { paymentSummary } from "./payments";
 
 export type Product = typeof products.$inferSelect;
 
@@ -35,6 +37,7 @@ export async function loadBook() {
     preorderRows,
     preorderItemRows,
     exchangeRows,
+    paymentRows,
   ] = await Promise.all([
     db.select().from(products).orderBy(asc(products.id)),
     db.select().from(purchases).orderBy(asc(purchases.date), asc(purchases.id)),
@@ -44,12 +47,14 @@ export async function loadBook() {
     db.select().from(preorders).orderBy(desc(preorders.date), desc(preorders.id)),
     db.select().from(preorderItems).orderBy(asc(preorderItems.id)),
     db.select().from(purchaseExchanges).orderBy(asc(purchaseExchanges.date), asc(purchaseExchanges.id)),
+    db.select().from(salePayments).orderBy(asc(salePayments.date), asc(salePayments.id)),
   ]);
 
   const purchaseLines = groupBy(purchaseItemRows, (row) => row.purchaseId);
   const saleLines = groupBy(saleItemRows, (row) => row.saleId);
   const preorderLines = groupBy(preorderItemRows, (row) => row.preorderId);
   const exchangesByPurchase = groupBy(exchangeRows, (row) => row.purchaseId);
+  const paymentsBySale = groupBy(paymentRows, (row) => row.saleId);
 
   const { saleLineCost, stock } = computeLedger(
     purchaseRows.flatMap((purchase) => purchaseLines.get(purchase.id) ?? []),
@@ -76,9 +81,15 @@ export async function loadBook() {
     const total = items.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
     const costedItems = items.map((item) => ({ ...item, cost: saleLineCost.get(item.id) ?? 0 }));
     const cost = costedItems.reduce((sum, item) => sum + item.cost, 0);
+    const payments = paymentsBySale.get(sale.id) ?? [];
+    const summary = paymentSummary(total, payments);
     return {
       ...sale,
       items: costedItems,
+      payments,
+      paidAmount: summary.paid,
+      dueAmount: summary.due,
+      paymentState: summary.state,
       total,
       cost,
       profit: total - cost,

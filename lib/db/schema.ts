@@ -124,3 +124,14 @@ export const purchaseExchanges = jacket.table("purchase_exchanges", {
   qty: integer("qty").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Money received for a sale. Several rows when a customer pays in parts. */
+export const salePayments = jacket.table("sale_payments", {
+  id: serial("id").primaryKey(),
+  saleId: integer("sale_id")
+    .notNull()
+    .references(() => sales.id, { onDelete: "cascade" }),
+  date: date("date", { mode: "string" }).notNull(),
+  amount: integer("amount").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

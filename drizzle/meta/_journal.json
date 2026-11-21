@@ -29,6 +29,13 @@
       "when": 1794582109878,
       "tag": "0003_purchase_exchanges",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795242462136,
+      "tag": "0004_sale_payments",
+      "breakpoints": true
     }
   ]
 }

@@ -34,7 +34,7 @@ export default async function HomePage() {
     .sort((a, b) =>
       (a.expectedPayDate ?? "9999-12-31").localeCompare(b.expectedPayDate ?? "9999-12-31"),
     );
-  const dueTotal = dueSales.reduce((sum, sale) => sum + sale.total, 0);
+  const dueTotal = dueSales.reduce((sum, sale) => sum + sale.dueAmount, 0);
   const overdue = dueSales.filter((sale) => dueState(sale, today) === "overdue");
 
   const pending = book.preorders.filter((preorder) => preorder.status === "pending");

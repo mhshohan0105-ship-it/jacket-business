@@ -15,13 +15,15 @@ import {
   purchaseItems,
   purchases,
   saleItems,
+  salePayments,
   sales,
 } from "./db/schema";
 import { applyExchange } from "./exchange";
-import { todayInDhaka } from "./format";
+import { money } from "./format";
 import { isLang, LANG_COOKIE, type Lang } from "./i18n/messages";
 import { getT } from "./i18n/server";
 import { findStockShortage } from "./ledger";
+import { paidAtSale, paymentSummary } from "./payments";
 import {
   InputError,
   optionalDate,
@@ -65,13 +67,27 @@ function parseSoldLine(line: Input) {
   };
 }
 
-function parsePayment(input: Input) {
-  const paymentStatus = input.paymentStatus === "due" ? ("due" as const) : ("paid" as const);
+/**
+ * Payment at the moment of sale: all of it, a part, or nothing. The sale stays
+ * due until everything has arrived; the expected date is for whatever is left.
+ */
+function parsePayment(input: Input, total: number, date: string) {
+  const partial = input.paymentStatus === "partial" ? requireAmount(input.paidAmount, "paidAmount", 1) : 0;
+  const paid = paidAtSale(input.paymentStatus, total, partial);
+  if (paid === null) throw new InputError((t) => t.partial.tooMuch);
+  const due = paid < total;
   return {
-    paymentStatus,
-    expectedPayDate: paymentStatus === "due" ? optionalDate(input.expectedPayDate) : null,
+    paid,
+    sale: {
+      paymentStatus: due ? ("due" as const) : ("paid" as const),
+      expectedPayDate: due ? optionalDate(input.expectedPayDate) : null,
+      paidDate: due ? null : date,
+    },
   };
 }
+
+const lineTotal = (lines: { qty: number; unitPrice: number }[]) =>
+  lines.reduce((sum, line) => sum + line.qty * line.unitPrice, 0);
 
 /** Pieces in stock per variant, as seen inside the current transaction. */
 async function stockOnHand(tx: Tx) {
@@ -257,33 +273,45 @@ export async function createSale(input: Input) {
     const customer = requireText(input.customer, "customer");
     const phone = optionalText(input.phone);
     const note = optionalText(input.note);
-    const payment = parsePayment(input);
     const lines = requireLines(input.lines, parseSoldLine);
+    const payment = parsePayment(input, lineTotal(lines), date);
 
     await db.transaction(async (tx) => {
       await assertInStock(tx, lines);
       const [sale] = await tx
         .insert(sales)
-        .values({
-          date,
-          customer,
-          phone,
-          note,
-          ...payment,
-          paidDate: payment.paymentStatus === "paid" ? date : null,
-        })
+        .values({ date, customer, phone, note, ...payment.sale })
         .returning({ id: sales.id });
       await tx.insert(saleItems).values(lines.map((line) => ({ ...line, saleId: sale.id })));
+      if (payment.paid > 0) {
+        await tx.insert(salePayments).values({ saleId: sale.id, date, amount: payment.paid });
+      }
     });
   });
 }
 
-export async function markSalePaid(id: number) {
+/** Money received later for a sale: the rest of it, or another part. */
+export async function recordSalePayment(input: Input) {
   return run(async (db) => {
-    await db
-      .update(sales)
-      .set({ paymentStatus: "paid", expectedPayDate: null, paidDate: todayInDhaka() })
-      .where(eq(sales.id, requireId(id)));
+    const saleId = requireId(input.saleId);
+    const date = requireDate(input.date, "date");
+    const amount = requireAmount(input.amount, "paidAmount", 1);
+
+    await db.transaction(async (tx) => {
+      const items = await tx.select().from(saleItems).where(eq(saleItems.saleId, saleId));
+      const payments = await tx.select().from(salePayments).where(eq(salePayments.saleId, saleId));
+      const { due } = paymentSummary(lineTotal(items), payments);
+      if (due === 0) throw new InputError((t) => t.partial.alreadyPaid);
+      if (amount > due) throw new InputError((t) => t.partial.payTooMuch(money(due)));
+
+      await tx.insert(salePayments).values({ saleId, date, amount });
+      if (amount === due) {
+        await tx
+          .update(sales)
+          .set({ paymentStatus: "paid", expectedPayDate: null, paidDate: date })
+          .where(eq(sales.id, saleId));
+      }
+    });
   });
 }
 
@@ -332,7 +360,6 @@ export async function deliverPreorder(input: Input) {
   return run(async (db) => {
     const id = requireId(input.id);
     const date = requireDate(input.date, "date");
-    const payment = parsePayment(input);
 
     await db.transaction(async (tx) => {
       const [preorder] = await tx.select().from(preorders).where(eq(preorders.id, id));
@@ -344,6 +371,7 @@ export async function deliverPreorder(input: Input) {
         .from(preorderItems)
         .where(eq(preorderItems.preorderId, id));
       await assertInStock(tx, lines);
+      const payment = parsePayment(input, lineTotal(lines), date);
 
       const [sale] = await tx
         .insert(sales)
@@ -352,11 +380,13 @@ export async function deliverPreorder(input: Input) {
           customer: preorder.customer,
           phone: preorder.phone,
           note: preorder.note,
-          ...payment,
-          paidDate: payment.paymentStatus === "paid" ? date : null,
+          ...payment.sale,
           preorderId: id,
         })
         .returning({ id: sales.id });
+      if (payment.paid > 0) {
+        await tx.insert(salePayments).values({ saleId: sale.id, date, amount: payment.paid });
+      }
       await tx.insert(saleItems).values(
         lines.map((line) => ({
           saleId: sale.id,

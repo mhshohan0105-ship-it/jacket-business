@@ -1,9 +1,10 @@
-import { deleteSale, markSalePaid } from "@/lib/actions";
+import { deleteSale } from "@/lib/actions";
 import type { SaleRow } from "@/lib/book";
 import { money, moneyExact, shortDate } from "@/lib/format";
 import { messages, type Lang } from "@/lib/i18n/messages";
 import { dueState } from "@/lib/ledger";
 import { ActionButton } from "./action-button";
+import { PayButton } from "./pay-button";
 import { Badge, Card, LineItems } from "./ui";
 
 export function SaleCard({
@@ -38,7 +39,9 @@ export function SaleCard({
           </p>
         </div>
         {state === "paid" && <Badge tone="good">{t.sales.paid}</Badge>}
-        {state === "due" && <Badge tone="warn">{t.sales.dueBadge}</Badge>}
+        {state === "due" && (
+          <Badge tone="warn">{sale.paymentState === "partial" ? t.partial.badge : t.sales.dueBadge}</Badge>
+        )}
         {state === "overdue" && <Badge tone="bad">{t.sales.overdue}</Badge>}
       </div>
 
@@ -55,10 +58,31 @@ export function SaleCard({
       )}
       {sale.note && <p className="mt-2 text-sm text-muted">{sale.note}</p>}
 
+      {(sale.paymentState === "partial" || sale.payments.length > 1) && (
+        <div className="mt-3 rounded-lg bg-paper px-3 py-2">
+          <p className="text-xs font-semibold text-muted">{t.partial.historyTitle}</p>
+          <ul className="num mt-1 space-y-0.5 text-xs">
+            {sale.payments.map((payment) => (
+              <li key={payment.id}>
+                {t.partial.historyLine(shortDate(payment.date, lang), money(payment.amount))}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="num mt-3 flex items-end justify-between border-t border-line pt-3">
         <div>
           <p className="text-xs text-muted">{t.common.total}</p>
           <p className="font-bold">{money(sale.total)}</p>
+          {sale.paymentState !== "paid" && (
+            <p className="mt-0.5 text-xs">
+              <span className="text-muted">{t.partial.received}</span> {money(sale.paidAmount)}
+              {" · "}
+              <span className="text-muted">{t.partial.left}</span>{" "}
+              <span className="font-semibold text-due">{money(sale.dueAmount)}</span>
+            </p>
+          )}
         </div>
         <div className="text-right">
           <p className="text-xs text-muted">{t.common.profit}</p>
@@ -76,14 +100,8 @@ export function SaleCard({
         >
           {t.common.delete}
         </ActionButton>
-        {sale.paymentStatus === "due" && (
-          <ActionButton
-            kind="primary"
-            action={markSalePaid.bind(null, sale.id)}
-            confirm={t.sales.confirmPaid(sale.customer, money(sale.total))}
-          >
-            {t.sales.gotPaid}
-          </ActionButton>
+        {sale.dueAmount > 0 && (
+          <PayButton saleId={sale.id} customer={sale.customer} due={sale.dueAmount} today={today} />
         )}
       </div>
     </Card>
